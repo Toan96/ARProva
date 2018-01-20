@@ -3,16 +3,22 @@
     package="com.example.antonio.arprova">
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" /> <!-- TODO: forse inutile, ma può essere anche piu specifico nelle feature.
         TODO: verificare uses-feature e required vari-->
 
-    <uses-feature android:name="android.hardware.location" android:required="false" />
-    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.network"
+        android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -22,11 +28,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".MainActivity"
 
-            android:configChanges="keyboardHidden|orientation"
+            android:name=".MainActivity"
             android:screenOrientation="landscape">
-            <!-- configure this activity to use landscape orientation -->
+            <!-- android:configChanges="keyboardHidden|orientation|screenSize"-->
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

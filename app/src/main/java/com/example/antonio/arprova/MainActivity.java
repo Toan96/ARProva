@@ -14,6 +14,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -32,7 +33,50 @@ public class MainActivity extends Activity {
     private Camera mCamera;
     private CameraPreview mPreview;
     private LocationManager locationManager;
+    private FrameLayout preview;
     private TextView tvGpsValues;
+    //variabile: listener per gps updates
+    private final ThreadLocal<LocationListener> locationListener = new ThreadLocal<LocationListener>() {
+        @Override
+        protected LocationListener initialValue() {
+            return new LocationListener() {
+                public void onLocationChanged(Location location) {
+                    Log.d("gps: ", "location changed");
+                    final double longitude = location.getLongitude();
+                    final double latitude = location.getLatitude();
+                    final double altitude = location.getAltitude();
+                    final String values = "Alt: " + altitude + " m" + System.getProperty("line.separator") +
+                            "Lat: " + latitude + System.getProperty("line.separator") + "Lon: " + longitude;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            tvGpsValues.setText(values);
+                            //do nothing else yet.
+                        }
+                    });
+                    Log.d("gps values changed", values);
+                }
+
+                @Override
+                public void onStatusChanged(String s, int i, Bundle bundle) {
+                    Log.d("gps: ", "status changed");
+                    takeLocationUpdates();
+                }
+
+                @Override
+                public void onProviderEnabled(String s) {
+                    Log.d("gps: ", "enabled");
+                    takeLocationUpdates();
+                }
+
+                @Override
+                public void onProviderDisabled(String s) {
+                    Log.d("gps: ", "disabled");
+                    Toast.makeText(getApplicationContext(), R.string.dialogLocation_Title, Toast.LENGTH_SHORT).show();
+                }
+            };
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,12 +111,11 @@ public class MainActivity extends Activity {
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = findViewById(R.id.camera_preview);
+        preview = findViewById(R.id.camera_preview);
         preview.addView(mPreview);
         //TODO: da sistemare, sicuramente poco efficiente.
         ((ViewGroup) tvGpsValues.getParent()).removeView(tvGpsValues);
         preview.addView(tvGpsValues);
-        takeLocationUpdates();
     }
 
     @Override
@@ -81,9 +124,28 @@ public class MainActivity extends Activity {
         mPreview.releaseCamera();              // release the camera immediately on pause event
     }
 
+/*
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        Log.d("onConfigurationChanged:", "enter");
+
+        // Checks the orientation of the screen
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            Log.d("orientation: ", "landscape");
+            preview.requestLayout();
+        } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
+            Log.d("orientation: ", "portrait");
+            preview.requestLayout();
+        }
+    }
+*/
+
     @Override
     protected void onResume() {
         super.onResume();
+        Log.d("onResume: ", "entering..");
+        takeLocationUpdates();
     }
 
     //metodi per gps
@@ -103,6 +165,7 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: metodo per permessi a runtime
                     //    Activity#requestPermissions
                     // here to request the missing permissions, and then overriding
                     //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
@@ -113,7 +176,7 @@ public class MainActivity extends Activity {
                 }
             }
             locationManager.requestLocationUpdates(provider, 2 * 60 * 1000, 10, locationListener.get());
-            Log.d("gps", provider);
+            Log.d("Best location provider", provider);
         }
     }
 
@@ -138,6 +201,13 @@ public class MainActivity extends Activity {
                 .setNegativeButton(R.string.dialogLocation_Negative, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                        final Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                takeLocationUpdates();
+                            }
+                        }, 7000);
                     }
                 });
         dialog.show();
@@ -147,40 +217,4 @@ public class MainActivity extends Activity {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
-
-    //variabile: listener per gps updates
-    private final ThreadLocal<LocationListener> locationListener = new ThreadLocal<LocationListener>() {
-        @Override
-        protected LocationListener initialValue() {
-            return new LocationListener() {
-                public void onLocationChanged(Location location) {
-                    final double longitude = location.getLongitude();
-                    final double latitude = location.getLatitude();
-                    final double altitude = location.getAltitude();
-                    final String values = "Alt: " + altitude + System.getProperty("line.separator") +
-                            "Lat: " + latitude + System.getProperty("line.separator") + "Lon: " + longitude;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            tvGpsValues.setText(values);
-                            //do nothing else yet.
-                        }
-                    });
-                    Log.d("gpsValues", values);
-                }
-
-                @Override
-                public void onStatusChanged(String s, int i, Bundle bundle) {
-                }
-
-                @Override
-                public void onProviderEnabled(String s) {
-                }
-
-                @Override
-                public void onProviderDisabled(String s) {
-                }
-            };
-        }
-    };
 }
