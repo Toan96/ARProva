@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">ARProva</string>
+    <string name="toast_cameraError">Si è verificato un errore con la fotocamera</string>
+    <string name="dialogLocation_Title">Abilita geolocalizzazione</string>
+    <!-- Enable Location , Your Locations Settings is set to 'Off'.\nPlease Enable Location to " +
+            "use this app , Location Settings, Cancel -->
+    <string name="dialogLocation_Message">La geolocalizzazione è disattivata.\nAbilitala per usare questa applicazione</string>
+    <string name="dialogLocation_Positive">Apri impostazioni</string>
+    <string name="dialogLocation_Negative">Chiudi</string>
+    <string name="tvGpsValuesHint">In attesa del segnale gps…</string>
+    <!-- Waiting for gps values… -->
+</resources>
