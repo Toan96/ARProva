@@ -1,31 +1,44 @@
 package com.example.antonio.arprova;
 
-/**
- * Created by Antonio on 19/01/2018.
- */
-
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.Toast;
 
 import java.io.IOException;
 
-import static android.content.ContentValues.TAG;
-
 /**
+ * Created by Antonio on 19/01/2018.
  * A basic Camera preview class
  */
+
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
+
+    private static String TAG = "CameraPreview";
     private SurfaceHolder mHolder;
     private Camera mCamera;
+    private int mDisplayOrientation;
 
     public CameraPreview(Context context, Camera camera) {
         super(context);
+
+        // Do not initialise if no camera has been set
+        if (camera == null) {
+            return;
+        }
+
         mCamera = camera;
+        Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(0, mCameraInfo);
+
+        // Get the rotation of the screen to adjust the preview image accordingly.
+        mDisplayOrientation = ((Activity) context).getWindowManager().getDefaultDisplay()
+                .getRotation();
 
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
@@ -45,10 +58,10 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 c = Camera.open(); // attempt to get a Camera instance
             } catch (Exception e) {
                 // Camera is not available (in use or does not exist)
-                Toast.makeText(context, R.string.toast_cameraError, Toast.LENGTH_SHORT).show();
+                Toast.makeText(context.getApplicationContext(), R.string.toast_cameraError, Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(context, R.string.toast_cameraNotFound, Toast.LENGTH_SHORT).show();
+            Toast.makeText(context.getApplicationContext(), R.string.toast_cameraNotFound, Toast.LENGTH_SHORT).show();
         }
         return c; // returns null if camera is unavailable
     }
@@ -61,17 +74,59 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA);
     }
 
+    /**
+     * Calculate the correct orientation for a {@link Camera} preview that is displayed on screen.
+     * <p>
+     * Implementation is based on the sample code provided in
+     * {@link Camera#setDisplayOrientation(int)}.
+     */
+    public static int calculatePreviewOrientation(int rotation) {
+        int degrees = 0;
+
+        Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(0, mCameraInfo);
+
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+
+        int result;
+
+        if (mCameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (mCameraInfo.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing*/
+            result = (mCameraInfo.orientation - degrees + 360) % 360;
+        }
+
+        return result;
+    }
+
     public void surfaceCreated(SurfaceHolder holder) {
         // The Surface has been created, now tell the camera where to draw the preview.
         Log.d("CameraPreview: ", "Surface creating..");
         try {
             if (mCamera == null) {
                 mCamera = getCameraInstance(getContext());
+                Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
+                Camera.getCameraInfo(0, mCameraInfo);
+
             }
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
         } catch (IOException e) {
-            Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+            Log.d("CameraPreview: ", "Error setting camera preview: " + e.getMessage());
         }
     }
 
@@ -136,6 +191,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                     besth = 320;
                 }
                 parameters.setPreviewSize(bestw, besth);
+                Log.d(TAG, "preview size: " + bestw + "w, " + besth + "h");
             } catch (Exception e) {
                 parameters.setPreviewSize(480, 320);
             }
@@ -144,12 +200,16 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+
+        int orientation = calculatePreviewOrientation(mDisplayOrientation);
+        mCamera.setDisplayOrientation(orientation);
+
         // start preview with new settings
         try {
             mCamera.setPreviewDisplay(mHolder);
             mCamera.startPreview();
         } catch (Exception e) {
-            Log.d(TAG, "Error starting camera preview: " + e.getMessage());
+            Log.d("CameraPreview: ", "Error starting camera preview: " + e.getMessage());
         }
     }
 

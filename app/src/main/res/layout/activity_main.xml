@@ -11,7 +11,7 @@
         android:layout_height="fill_parent"
         android:layout_weight="1">
 
-        <TextView
+        <!-- TextView
             android:id="@+id/tvGpsValues"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -20,6 +20,8 @@
             android:hint="@string/tvGpsValuesHint"
             android:textColorHint="#cecece"
             android:textColor="#cecece"/>
+
+        <Fragment -->
 
     </FrameLayout>
 

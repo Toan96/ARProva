@@ -1,82 +1,39 @@
 package com.example.antonio.arprova;
 
-import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.Camera;
-import android.location.Criteria;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
-import android.view.ViewGroup;
+import android.view.Gravity;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.List;
 
 import static com.example.antonio.arprova.CameraPreview.getCameraInstance;
 
-public class MainActivity extends Activity {
+/**
+ * Created by Antonio on 19/01/2018.
+ * .
+ */
 
+public class MainActivity extends Activity implements UpdateUICallback {
+
+    //TODO delete numChiamate
+    static int numChiamate = 0;
+    private static String TAG = "MainActivity";
     private Camera mCamera;
     private CameraPreview mPreview;
-    private LocationManager locationManager;
+    private MyGPSLocation myGPSLocation;
     private FrameLayout preview;
     private TextView tvGpsValues;
-    //variabile: listener per gps updates
-    private final ThreadLocal<LocationListener> locationListener = new ThreadLocal<LocationListener>() {
-        @Override
-        protected LocationListener initialValue() {
-            return new LocationListener() {
-                public void onLocationChanged(Location location) {
-                    Log.d("gps: ", "location changed");
-                    final double longitude = location.getLongitude();
-                    final double latitude = location.getLatitude();
-                    final double altitude = location.getAltitude();
-                    final String values = "Alt: " + altitude + " m" + System.getProperty("line.separator") +
-                            "Lat: " + latitude + System.getProperty("line.separator") + "Lon: " + longitude;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            tvGpsValues.setText(values);
-                            //do nothing else yet.
-                        }
-                    });
-                    Log.d("gps values changed", values);
-                }
-
-                @Override
-                public void onStatusChanged(String s, int i, Bundle bundle) {
-                    Log.d("gps: ", "status changed");
-                    takeLocationUpdates();
-                }
-
-                @Override
-                public void onProviderEnabled(String s) {
-                    Log.d("gps: ", "enabled");
-                    takeLocationUpdates();
-                }
-
-                @Override
-                public void onProviderDisabled(String s) {
-                    Log.d("gps: ", "disabled");
-                    Toast.makeText(getApplicationContext(), R.string.dialogLocation_Title, Toast.LENGTH_SHORT).show();
-                }
-            };
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,12 +46,12 @@ public class MainActivity extends Activity {
         //set no title and no notifybar before set layout
         setContentView(R.layout.activity_main);
 
-        //gps
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        tvGpsValues = findViewById(R.id.tvGpsValues);
+        //lastKnown = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        myGPSLocation = new MyGPSLocation(this, this);
 
         // Create an instance of Camera
         mCamera = getCameraInstance(getApplicationContext());
+
         //TODO: forse inutile
         // get Camera parameters
         Camera.Parameters params = mCamera.getParameters();
@@ -109,112 +66,113 @@ public class MainActivity extends Activity {
         }
         //fine forse inutile
 
-        // Create our Preview view and set it as the content of our activity.
+
+        // Create the Preview view and set it as the content of this Activity.
         mPreview = new CameraPreview(this, mCamera);
         preview = findViewById(R.id.camera_preview);
         preview.addView(mPreview);
-        //TODO: da sistemare, sicuramente poco efficiente.
-        ((ViewGroup) tvGpsValues.getParent()).removeView(tvGpsValues);
+
+        //add views on camera preview.
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+
+        int margin = Utils.dpToPixels(getApplicationContext(), 10);
+        layoutParams.setMargins(margin, margin, margin, margin);
+        layoutParams.gravity = Gravity.BOTTOM | Gravity.START;
+        tvGpsValues = new TextView(this);
+        tvGpsValues.setLayoutParams(layoutParams);
+        tvGpsValues.setTextColor(Color.parseColor("#cecece"));
         preview.addView(tvGpsValues);
+
+        //add map fragment
+        FrameLayout mapContainer = new FrameLayout(this);
+        mapContainer.setId(R.id.mapContainer);
+        FrameLayout.LayoutParams layoutParamsMap = new FrameLayout.LayoutParams(Utils.dpToPixels(getApplicationContext(),
+                100), Utils.dpToPixels(getApplicationContext(), 100));
+        layoutParamsMap.setMargins(margin, margin, margin, margin);
+        layoutParamsMap.gravity = Gravity.BOTTOM | Gravity.END;
+        mapContainer.setLayoutParams(layoutParamsMap);
+        //mapContainer.setBackgroundColor(Color.GREEN);
+        preview.addView(mapContainer);
+        //getFragmentManager().beginTransaction().add(R.id.mapContainer, com.google.android.gms.maps.MapFragment.newInstance()).commit();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        myGPSLocation.removeHandler();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        myGPSLocation.stopUpdates();
         mPreview.releaseCamera();              // release the camera immediately on pause event
     }
-
-/*
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        Log.d("onConfigurationChanged:", "enter");
-
-        // Checks the orientation of the screen
-        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            Log.d("orientation: ", "landscape");
-            preview.requestLayout();
-        } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
-            Log.d("orientation: ", "portrait");
-            preview.requestLayout();
-        }
-    }
-*/
 
     @Override
     protected void onResume() {
         super.onResume();
         Log.d("onResume: ", "entering..");
-        takeLocationUpdates();
-    }
-
-    //metodi per gps
-    public void takeLocationUpdates() {
-        if (!checkLocation())
-            return;
-
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setAltitudeRequired(true);
-        criteria.setBearingRequired(false);
-        criteria.setCostAllowed(true);
-        criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
-        String provider = locationManager.getBestProvider(criteria, true);
-        if (provider != null) {
-            //in questo modo se > di marshmallow e utente rifiuta non si verificano problemi.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                        checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: metodo per permessi a runtime
-                    //    Activity#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for Activity#requestPermissions for more details.
-                    return;
-                }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Utils.requestPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION, MyGPSLocation.MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOC, this);
             }
-            locationManager.requestLocationUpdates(provider, 2 * 60 * 1000, 10, locationListener.get());
-            Log.d("Best location provider", provider);
         }
+        //TODO riabilita
+        Location lastKnown = null;// = myGPSLocation.getLocationManager().getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        if (lastKnown != null) {
+            String values = "Alt: " + lastKnown.getAltitude() + " m" + System.getProperty("line.separator") +
+                    "Lat: " + lastKnown.getLatitude() + System.getProperty("line.separator") + "Lon: " + lastKnown.getLongitude();
+            Log.d("gps: ", "used lastKnownLocation");
+
+            tvGpsValues.setText(values);
+        } else {
+            tvGpsValues.setText(R.string.tvGpsValuesHint);
+            Log.d(TAG, "no last known position");
+        }
+        Log.d(TAG, "updated tvGpsValues");
+        Log.d(TAG, "numThreads: " + Thread.activeCount());
+        myGPSLocation.takeLocationUpdates();
     }
 
-    //metodi per verificare la presenza della geolocalizzazione e abilitarla in caso negativo.
-    private boolean checkLocation() {
-        if (!isLocationEnabled())
-            showAlert();
-        return isLocationEnabled();
+    @Override
+    public void updateGpsTv(String values) {
+        final String value = values;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                tvGpsValues.setText(value + " " + numChiamate++);
+            }
+        });
     }
 
-    private void showAlert() {
-        final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-        dialog.setTitle(R.string.dialogLocation_Title)
-                .setMessage(R.string.dialogLocation_Message)
-                .setPositiveButton(R.string.dialogLocation_Positive, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                        Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                        startActivity(myIntent);
-                    }
-                })
-                .setNegativeButton(R.string.dialogLocation_Negative, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                        final Handler handler = new Handler();
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                takeLocationUpdates();
-                            }
-                        }, 7000);
-                    }
-                });
-        dialog.show();
-    }
 
-    private boolean isLocationEnabled() {
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        // BEGIN_INCLUDE(onRequestPermissionsResult)
+        Log.d(TAG, "onRequestPermissionsResult");
+        if (requestCode == MyGPSLocation.MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOC) {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                myGPSLocation.takeLocationUpdates();
+            } else {
+                // TODO other
+                // Permission request was denied.
+                finish();
+            }
+        }
+
+        if (requestCode == MyGPSLocation.MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOC) {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                myGPSLocation.takeLocationUpdates();
+            } else {
+                // TODO other
+                // Permission request was denied.
+                finish();
+            }
+        }
     }
 }

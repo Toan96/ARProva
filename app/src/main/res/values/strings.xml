@@ -9,5 +9,6 @@
     <string name="dialogLocation_Negative">Chiudi</string>
     <string name="tvGpsValuesHint">In attesa del segnale gps…</string>
     <string name="toast_cameraNotFound">Ops..sembra che manchi la fotocamera</string>
+    <string name="errorePermessi">errore, permessi necessari</string>
     <!-- Waiting for gps values… -->
 </resources>
