@@ -10,5 +10,17 @@
     <string name="tvGpsValuesHint">In attesa del segnale gps…</string>
     <string name="toast_cameraNotFound">Ops..sembra che manchi la fotocamera</string>
     <string name="errorePermessi">errore, permessi necessari</string>
+    <string name="dialog_permission_refused">Rifiuta</string>
+    <string name="dialog_permission_allow">Concedi</string>
+    <string name="permission_grant_message">I seguenti permessi sono richiesti:</string>
+    <string name="explain_permission_coarse_location">serve per posizione approssimata</string>
+    <string name="explain_permission_fine_location">serve per posizione precisa</string>
+    <string name="explain_permission_camera">serve per mostrare fotocamera</string>
+    <string name="permission_denied_message">Permessi negati</string>
+    <string name="no_location_data_provided">non c\'è il provider di locazione</string>
+    <string name="service_not_available">Servizio non disponibile</string>
+    <string name="invalid_lat_long_used">laat e long usati non validi</string>
+    <string name="no_address_found">Nessun indirizzo trovato</string>
+    <string name="address_found">Indirizzo trovato</string>
     <!-- Waiting for gps values… -->
 </resources>

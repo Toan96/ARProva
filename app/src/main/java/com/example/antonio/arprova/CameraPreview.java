@@ -11,6 +11,7 @@ import android.view.SurfaceView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -63,6 +64,21 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         } else {
             Toast.makeText(context.getApplicationContext(), R.string.toast_cameraNotFound, Toast.LENGTH_SHORT).show();
         }
+
+        //TODO: forse inutile
+        // get Camera parameters
+        Camera.Parameters params = c.getParameters();
+
+        List<String> focusModes = params.getSupportedFocusModes();
+        if (focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+            // Autofocus mode is supported
+            // set the focus mode
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+            // set Camera parameters
+            c.setParameters(params);
+        }
+        //fine forse inutile
+
         return c; // returns null if camera is unavailable
     }
 
