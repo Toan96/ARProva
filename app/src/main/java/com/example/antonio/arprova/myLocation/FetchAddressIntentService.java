@@ -147,7 +147,7 @@ public class FetchAddressIntentService extends IntentService {
             for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                 addressFragments.add(address.getAddressLine(i));
             }
-            //una sola linea
+            //una sola linea per questo niente line separator.
             deliverResultToReceiver(SUCCESS_RESULT,
                     TextUtils.join(System.getProperty("line.separator"), addressFragments));
         }

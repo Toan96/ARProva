@@ -18,6 +18,8 @@ import java.util.List;
  * A basic Camera preview class
  */
 
+//TODO need better method for size.
+// see https://github.com/pikanji/CameraPreviewSample/blob/master/src/net/pikanji/camerapreviewsample/CameraPreview.java
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
     private static String TAG = "CameraPreview";
@@ -65,19 +67,22 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             Toast.makeText(context.getApplicationContext(), R.string.toast_cameraNotFound, Toast.LENGTH_SHORT).show();
         }
 
-        //TODO: forse inutile
-        // get Camera parameters
-        Camera.Parameters params = c.getParameters();
+        if (null != c) {
+            Log.d(TAG, "getCameraInstance: camera NOT null, setting parameters..");
+            //TODO: forse inutile
+            // get Camera parameters
+            Camera.Parameters params = c.getParameters();
 
-        List<String> focusModes = params.getSupportedFocusModes();
-        if (focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-            // Autofocus mode is supported
-            // set the focus mode
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-            // set Camera parameters
-            c.setParameters(params);
+            List<String> focusModes = params.getSupportedFocusModes();
+            if (focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+                // Autofocus mode is supported
+                // set the focus mode
+                params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+                // set Camera parameters
+                c.setParameters(params);
+            }
+            //fine forse inutile
         }
-        //fine forse inutile
 
         return c; // returns null if camera is unavailable
     }
@@ -147,8 +152,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
 
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // was empty. Take care of releasing the Camera preview in your activity.
-        //fatto
+        // was empty. care of releasing the Camera preview in your activity.
         Log.d("CameraPreview: ", "Surface destroying..");
         try {
             if (mCamera != null) {
@@ -217,6 +221,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             ex.printStackTrace();
         }
 
+        //TODO exception in silvcell
         int orientation = calculatePreviewOrientation(mDisplayOrientation);
         mCamera.setDisplayOrientation(orientation);
 
@@ -234,5 +239,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.release();        // release the camera for other applications
             mCamera = null;
         }
+        mHolder.removeCallback(this);
     }
 }

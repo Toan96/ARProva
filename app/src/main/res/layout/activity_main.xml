@@ -1,28 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/camera_preview"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:baselineAligned="false"
-    android:orientation="horizontal">
+    android:baselineAligned="false">
 
-    <FrameLayout
-        android:id="@+id/camera_preview"
-        android:layout_width="0dp"
-        android:layout_height="fill_parent"
-        android:layout_weight="1">
+    <LinearLayout
+        android:id="@+id/layoutContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="10dp">
 
-        <!-- TextView
+        <TextView
             android:id="@+id/tvGpsValues"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|start"
-            android:layout_margin="10dp"
+            android:layout_marginEnd="5dp"
+            android:layout_weight="2"
             android:hint="@string/tvGpsValuesHint"
-            android:textColorHint="#cecece"
-            android:textColor="#cecece"/>
+            android:maxWidth="500dp"
+            android:textColor="#cecece"
+            android:textColorHint="#5c5c5c" />
 
-        <Fragment -->
+        <FrameLayout
+            android:id="@+id/mapContainer"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="bottom|end"
+            android:background="#00ff00">
 
-    </FrameLayout>
+        </FrameLayout>
 
-</LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvErrorePermessiCamera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="10dp"
+        android:hint="@string/errorePermessi"
+        android:textColor="#cecece"
+        android:textColorHint="#5c5c5c"
+        android:visibility="gone" />
+
+</FrameLayout>
