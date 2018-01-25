@@ -1,27 +1,25 @@
 package com.example.antonio.arprova.myLocation;
 
-import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.example.antonio.arprova.R;
 import com.example.antonio.arprova.UpdateUICallback;
-import com.example.antonio.arprova.Utils;
+
+import java.util.Locale;
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -30,10 +28,8 @@ import com.example.antonio.arprova.Utils;
 
 public class MyGPSLocation {
 
-    protected static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOC = 123;
-    protected static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOC = 321;
-    private static final long MIN_TIME = 5 * 1000;
-    private static final long MIN_DISTANCE = 5;
+    private static final long MIN_TIME = 15 * 1000;
+    private static final long MIN_DISTANCE = 10;
     private static String TAG = "MyGPSLocation";
     private Context context;
     private LocationManager locationManager;
@@ -54,8 +50,9 @@ public class MyGPSLocation {
             final double bearing = location.getBearing();
             final double accuracy = location.getAccuracy();
             startIntentService(location);
-            final String values = "Alt: " + String.format("%.2f", altitude) + " m" + System.getProperty("line.separator") +
-                    "Lat: " + String.format("%.2f", latitude) + System.getProperty("line.separator") + "Lon: " + String.format("%.2f", longitude);
+            final String values = "Alt: " + String.format(Locale.getDefault(), "%.1f", altitude) + " m" + System.getProperty("line.separator") +
+                    "Lat: " + String.format(Locale.getDefault(), "%.4f", latitude) + System.getProperty("line.separator") +
+                    "Lon: " + String.format(Locale.getDefault(), "%.4f", longitude);
 
             updateUICallback.updateGpsTv(values);
             Log.d("gps values changed", values + " Bear: " + String.format("%.2f", bearing) + " Accu: " + String.format("%.2f", accuracy));
@@ -90,6 +87,7 @@ public class MyGPSLocation {
     }
 
     //metodi per gps
+    @SuppressLint("MissingPermission")
     public void takeLocationUpdates() {
         if (!checkLocation())
             return;
@@ -102,23 +100,11 @@ public class MyGPSLocation {
         criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
         String provider = locationManager.getBestProvider(criteria, true);
         if (provider != null) {
-            //in questo modo se > di marshmallow e utente rifiuta non si verificano problemi.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                Log.d(TAG + " permission", "need android m runtime permissions");
-                if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    Utils.permissionsCheck((Activity) context);
-                }
-
-                if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    Utils.permissionsCheck((Activity) context);
-                }
-            }
+            //forse qui veniva chiamato troppe volte inutilmente(impossibile vedere). removeupdates per evitare (spero).
+            locationManager.removeUpdates(locationListener);
+            locationManager.requestLocationUpdates(provider, MIN_TIME, MIN_DISTANCE, locationListener);
+            Log.d("Best location provider", provider);
         }
-        //TODO da verificare
-        //forse qui veniva chiamato troppe volte inutilmente(impossibile vedere). removeupdates per evitare (spero).
-        locationManager.removeUpdates(locationListener);
-        locationManager.requestLocationUpdates(provider, MIN_TIME, MIN_DISTANCE, locationListener);
-        Log.d("Best location provider", provider);
     }
 
     //metodi per verificare la presenza della geolocalizzazione e abilitarla in caso negativo.
@@ -174,13 +160,8 @@ public class MyGPSLocation {
         locationManager.removeUpdates(locationListener);
     }
 
+    @SuppressLint("MissingPermission")
     public Location getBestLastKnownLocation() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                    ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                Utils.permissionsCheck((Activity) context);
-            }
-        }
         Location lastKnown = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         if (lastKnown != null) {
             return lastKnown;
