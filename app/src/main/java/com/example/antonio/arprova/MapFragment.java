@@ -1,31 +1,28 @@
 package com.example.antonio.arprova;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 
 /**
  * Created by Antonio on 19/01/2018.
- * .
- */
-
-/**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
  * {@link MapFragment.OnFragmentInteractionListener} interface
@@ -35,19 +32,13 @@ import com.google.android.gms.maps.model.LatLng;
  */
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
+    static final int DEFAULT_ZOOM = 2;
+    static final int MAX_ZOOM = 16;
+    static final int MIN_ZOOM = 0;
+    static GoogleMap map;
+    static boolean first = true;
     MapView mapView;
-    GoogleMap map;
-    /*
-        // TODO: Rename parameter arguments, choose names that match
-        // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-        private static final String ARG_PARAM1 = "param1";
-        private static final String ARG_PARAM2 = "param2";
-
-        // TODO: Rename and change types of parameters
-        private String mParam1;
-        private String mParam2;
-    */
-    private OnFragmentInteractionListener mListener;
+    private OnFragmentInteractionListener mListener;//penso servirà
 
     public MapFragment() {
         // Required empty public constructor
@@ -57,11 +48,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
      *
-     * @param //param1 Parameter 1.
-     * @param //param2 Parameter 2.
      * @return A new instance of fragment MapFragment.
      */
-    // TODO: Rename and change types and number of parameters
     public static MapFragment newInstance() {
         MapFragment fragment = new MapFragment();
         /*
@@ -71,6 +59,26 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         fragment.setArguments(args);
         */
         return fragment;
+    }
+
+    @SuppressLint("MissingPermission")
+    public static void setCamera(Location location) {
+        if (null != map) {
+            if (null != location && first) {
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAX_ZOOM);
+                map.animateCamera(cameraUpdate);
+                first = false;
+            } else if ((null != location) && !first) {
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(), location.getLongitude()));
+                map.animateCamera(cameraUpdate);
+            } else {
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.51), DEFAULT_ZOOM);
+                map.animateCamera(cameraUpdate);
+            }
+            if (!map.isMyLocationEnabled()) {
+                map.setMyLocationEnabled(true);
+            }
+        }
     }
 
     @Override
@@ -88,40 +96,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View v = inflater.inflate(R.layout.fragment_map, container, false);
+        View v = inflater.inflate(R.layout.fragment_map, container, false);//null o container?
 
-        //TODO delete this snippet if work
         int statusCode = com.google.android.gms.common.GooglePlayServicesUtil.isGooglePlayServicesAvailable(this.getActivity());
         Log.d("MapFragment: ", "Connection Result = " + statusCode);
-        switch (statusCode) {
-            case ConnectionResult.SUCCESS:
-                Toast.makeText(this.getActivity(), "SUCCESS", Toast.LENGTH_SHORT).show();
-                break;
-            case ConnectionResult.SERVICE_MISSING:
-                Toast.makeText(this.getActivity(), "SERVICE MISSING", Toast.LENGTH_SHORT).show();
-                break;
-            case ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED:
-                Toast.makeText(this.getActivity(), "UPDATE REQUIRED", Toast.LENGTH_SHORT).show();
-                break;
-            //
-            // see http://developer.android.com/reference/com/google/android/gms/common/ConnectionResult.html for error code translation!!!
-            //
-            default:
-                Toast.makeText(this.getActivity(), "Play Service result " + statusCode, Toast.LENGTH_SHORT).show();
-        }
 
-
-        //TODO forse serve
         // Gets the MapView from the XML layout and creates it
-        mapView = v.findViewById(R.id.mapFragment);
+        mapView = v.findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
 
-        // Get the SupportMapFragment and request notification
-        // when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getActivity().getSupportFragmentManager()
-                .findFragmentById(R.id.mapFragment);
-        mapFragment.getMapAsync(this);
-
+        mapView.getMapAsync(this);
 
         // Needs to call MapsInitializer before doing any CameraUpdateFactory calls
         try {
@@ -130,15 +114,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             e.printStackTrace();
         }
 
-        // Updates the location and zoom of the MapView
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(43.1, -87.9), 10);
-        map.animateCamera(cameraUpdate);
-
         return v;
     }
 
     /*
-        // TODO: Rename method, update argument and hook method into UI event
+
         public void onButtonPressed(Uri uri) {
             if (mListener != null) {
                 mListener.onFragmentInteraction(uri);
@@ -150,6 +130,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         super.onAttach(context);
         if (context instanceof OnFragmentInteractionListener) {
             mListener = (OnFragmentInteractionListener) context;
+        } else if (this instanceof OnFragmentInteractionListener) {
+            mListener = (OnFragmentInteractionListener) this;
         } else {
             throw new RuntimeException(context.toString()
                     + " must implement OnFragmentInteractionListener");
@@ -186,11 +168,39 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mapView.onLowMemory();
     }
 
+
+    @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(final GoogleMap map) {
-        this.map = map;
+        MapFragment.map = map;
+        // Updates the location and zoom of the MapView
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.51), DEFAULT_ZOOM);
+        map.animateCamera(cameraUpdate);
+        map.setMinZoomPreference(MIN_ZOOM);
+        map.setMaxZoomPreference(MAX_ZOOM);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            map.setMyLocationEnabled(true);
+        } else {
+            //TODO non sposta la mappa set mylocation sopra M.. lo farà solo onLocationChanged
+            if (this.getContext().checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    this.getContext().checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                map.setMyLocationEnabled(true);
+                Log.d("Location permission: ", "granted");
+            }
+        }
         map.getUiSettings().setMyLocationButtonEnabled(false);
-        map.setMyLocationEnabled(true);
+        map.getUiSettings().setCompassEnabled(true);
+        map.getUiSettings().setAllGesturesEnabled(false);
+        map.getUiSettings().setZoomControlsEnabled(false);
+        map.getUiSettings().setMapToolbarEnabled(false);
+        //TODO settings other maybe
+    }
+
+    public void SetZoomLevel(int zoomLevel) {
+        if (null != map) {
+            map.animateCamera(CameraUpdateFactory.zoomTo(zoomLevel));
+            Log.d("Zoom Level changed: ", "now is " + String.valueOf(zoomLevel));
+        }
     }
 
     /**
@@ -204,7 +214,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      * >Communicating with Other Fragments</a> for more information.
      */
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
     }
 }

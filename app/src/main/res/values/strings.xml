@@ -22,5 +22,7 @@
     <string name="invalid_lat_long_used">laat e long usati non validi</string>
     <string name="no_address_found">Nessun indirizzo trovato</string>
     <string name="address_found">Indirizzo trovato</string>
+    <string name="errorePermessiCamera">Errore, permessi camera necessari</string>
+    <string name="explain_zoom">scorrere su e giu a destra per zoom</string>
     <!-- Waiting for gps values… -->
 </resources>

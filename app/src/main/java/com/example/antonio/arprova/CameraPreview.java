@@ -18,18 +18,18 @@ import java.util.List;
  * A basic Camera preview class
  */
 
-//TODO need better method for size.
-// see https://github.com/pikanji/CameraPreviewSample/blob/master/src/net/pikanji/camerapreviewsample/CameraPreview.java
+
+// for better camera size see https://github.com/pikanji/CameraPreviewSample/blob/master/src/net/pikanji/camerapreviewsample/CameraPreview.java
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
     private static String TAG = "CameraPreview";
     private SurfaceHolder mHolder;
+    private Context context;
     private Camera mCamera;
-    private int mDisplayOrientation;
 
     public CameraPreview(Context context, Camera camera) {
         super(context);
-
+        this.context = context;
         // Do not initialise if no camera has been set
         if (camera == null) {
             return;
@@ -38,10 +38,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         mCamera = camera;
         Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(0, mCameraInfo);
-
-        // Get the rotation of the screen to adjust the preview image accordingly.
-        mDisplayOrientation = ((Activity) context).getWindowManager().getDefaultDisplay()
-                .getRotation();
 
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
@@ -101,13 +97,17 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
      * Implementation is based on the sample code provided in
      * {@link Camera#setDisplayOrientation(int)}.
      */
-    public static int calculatePreviewOrientation(int rotation) {
+    public static int calculatePreviewOrientation(Context context) {
         int degrees = 0;
+
+        // Get the rotation of the screen to adjust the preview image accordingly.
+        int mDisplayOrientation = ((Activity) context).getWindowManager().getDefaultDisplay()
+                .getRotation();
 
         Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(0, mCameraInfo);
 
-        switch (rotation) {
+        switch (mDisplayOrientation) {
             case Surface.ROTATION_0:
                 degrees = 0;
                 break;
@@ -164,13 +164,13 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 mCamera.setPreviewCallback(null);
                 try {
                     mCamera.release();
-                } catch (Exception ex2) {
-                    ex2.printStackTrace();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
                 mCamera = null;
             }
-        } catch (Exception ex22) {
-            ex22.printStackTrace();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -221,8 +221,8 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             ex.printStackTrace();
         }
 
-        //TODO exception in silvcell
-        int orientation = calculatePreviewOrientation(mDisplayOrientation);
+        //TODO exception in silvcell e emu
+        int orientation = calculatePreviewOrientation(context);
         mCamera.setDisplayOrientation(orientation);
 
         // start preview with new settings

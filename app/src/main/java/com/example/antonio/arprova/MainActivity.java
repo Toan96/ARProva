@@ -2,25 +2,25 @@ package com.example.antonio.arprova;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.example.antonio.arprova.myLocation.MyGPSLocation;
-
-import java.util.Locale;
 
 import static com.example.antonio.arprova.CameraPreview.getCameraInstance;
 
@@ -29,13 +29,17 @@ import static com.example.antonio.arprova.CameraPreview.getCameraInstance;
  * .
  */
 
-public class MainActivity extends Activity implements UpdateUICallback {
+public class MainActivity extends AppCompatActivity implements UpdateUICallback, MapFragment.OnFragmentInteractionListener {
 
     private static String TAG = "MainActivity";
     private FrameLayout preview;
+    private CoordinatorLayout coordinatorLayout;
+    private FrameLayout mapContainer;
+    private MapFragment mapFragment;
     private CameraPreview mPreview;
     private MyGPSLocation myGPSLocation;
     private TextView tvGpsValues;
+    private SeekBar seekZoom;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,19 +51,44 @@ public class MainActivity extends Activity implements UpdateUICallback {
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         //set no title and no notifybar before set layout
         setContentView(R.layout.activity_main);
+
+        preview = findViewById(R.id.camera_preview);
+        coordinatorLayout = findViewById(R.id.coordinatorLayout);
+        tvGpsValues = findViewById(R.id.tvGpsValues);
+        seekZoom = findViewById(R.id.seekBarZoom);
+        seekZoom.setProgress(MapFragment.DEFAULT_ZOOM);
+        // perform seek bar change listener event used for getting the progress value
+        seekZoom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (null != mapFragment) mapFragment.SetZoomLevel(seekZoom.getProgress() + 1);
+            }
+
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        myGPSLocation.removeHandler();
+        if (null != myGPSLocation)
+            myGPSLocation.removeHandler();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        myGPSLocation.stopUpdates();
-        mPreview.releaseCamera();              // release the camera immediately on pause event
+        if (null != myGPSLocation)
+            myGPSLocation.stopUpdates();
+        if (null != mPreview)
+            mPreview.releaseCamera();              // release the camera immediately on pause event
+        if (null != mapContainer) {
+            getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
+        }
     }
 
     @Override
@@ -72,6 +101,8 @@ public class MainActivity extends Activity implements UpdateUICallback {
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "API 23+: requesting permission for camera");
                 requestCameraPermission();
+            } else {
+                showLayout();
             }
         } else {
             Log.d(TAG, "API 22 or less: not need to check runtime permission for camera");
@@ -84,6 +115,8 @@ public class MainActivity extends Activity implements UpdateUICallback {
                     checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "API 23+: requesting permissions for location");
                 requestLocationPermissions();
+            } else {
+                showLocation();
             }
         } else {
             Log.d(TAG, "API 22 or less: not need to check runtime permissions for location");
@@ -104,17 +137,16 @@ public class MainActivity extends Activity implements UpdateUICallback {
         Location lastKnown = myGPSLocation.getBestLastKnownLocation();
         if (lastKnown != null) {
             myGPSLocation.startIntentService(lastKnown);
-            String values = "Alt: " + String.format(Locale.getDefault(), "%.1f", lastKnown.getAltitude()) + " m" + System.getProperty("line.separator") +
-                    "Lat: " + String.format(Locale.getDefault(), "%.4f", lastKnown.getLatitude()) + System.getProperty("line.separator") +
-                    "Lon: " + String.format(Locale.getDefault(), "%.4f", lastKnown.getLongitude());
             Log.d("gps: ", "used lastKnownLocation");
-            tvGpsValues.setText(values);
+            tvGpsValues.setText(Utils.formattedValues(lastKnown));
+            seekZoom.setProgress(MapFragment.MAX_ZOOM);
 
         } else {
             tvGpsValues.setText(R.string.tvGpsValuesHint);
             Log.d("gps: ", "no last known position");
         }
         Log.d(TAG, "updated tvGpsValues");
+        tvGpsValues.setVisibility(View.VISIBLE);
         myGPSLocation.takeLocationUpdates();
     }
 
@@ -124,19 +156,18 @@ public class MainActivity extends Activity implements UpdateUICallback {
 
         // Create the Preview view and set it as the content of this Activity.
         mPreview = new CameraPreview(this, mCamera);
-        preview = findViewById(R.id.camera_preview);
         preview.addView(mPreview);
 
-        //add views on camera preview. layout container need to stay up.
-        LinearLayout layoutContainer = findViewById(R.id.layoutContainer);
-        layoutContainer.bringToFront();
-        tvGpsValues = findViewById(R.id.tvGpsValues);
-        tvGpsValues.bringToFront();
+        //layout container need to stay up. bring to up other subViews.
+        coordinatorLayout.bringToFront();
+
         //add map fragment
-        FrameLayout mapContainer = findViewById(R.id.mapContainer);
-        mapContainer.bringToFront();
-        //TODO map
-        //getFragmentManager().beginTransaction().add(R.id.mapContainer, com.google.android.gms.maps.MapFragment.newInstance()).commit();
+        mapContainer = findViewById(R.id.mapContainer);
+        mapContainer.setVisibility(View.VISIBLE);
+        seekZoom.setVisibility(View.VISIBLE);
+
+        mapFragment = MapFragment.newInstance();
+        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commit();
     }
 
     /**
@@ -153,7 +184,7 @@ public class MainActivity extends Activity implements UpdateUICallback {
             // and the user would benefit from additional context for the use of the permission.
             // For example if the user has previously denied the permission.
             Log.i(TAG, "Displaying camera permission rationale to provide additional context.");
-            //per forza preview se non c'è la camera non c'è mPreview.
+            //necessaria preview, se non c'è la camera non c'è mPreview.
             Snackbar.make(preview, R.string.explain_permission_camera,
                     Snackbar.LENGTH_INDEFINITE)
                     .setAction(R.string.dialog_permission_allow, new View.OnClickListener() {
@@ -218,28 +249,34 @@ public class MainActivity extends Activity implements UpdateUICallback {
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Camera permission has been granted, preview can be displayed
                 Log.i(TAG, "CAMERA permission has now been granted. Showing preview.");
-                //errCamera.setVisibility(View.GONE);
                 showLayout();
             } else {
                 Log.i(TAG, "CAMERA permission was NOT granted.");
+                coordinatorLayout.bringToFront();
+                //errCamera.bringToFront();
                 errCamera.setVisibility(View.VISIBLE);
-                errCamera.bringToFront();
             }
         } else if (requestCode == Utils.MY_PERMISSIONS_REQUEST_ACCESS_LOC) {
             Log.i(TAG, "Received response for location permissions request.");
 
-            // We have requested multiple permissions for location, so all of them need to be
+            // requested multiple permissions for location, so all of them need to be
             // checked.
             if (Utils.verifyPermissions(grantResults)) {
-                // All required permissions have been granted, display contacts fragment.
+                // All required permissions have been granted.
                 showLocation();
             } else {
-                Log.i(TAG, "Contacts permissions were NOT granted.");
-                updateGpsTv(getString(R.string.errorePermessi) + "GPS");
+                Log.i(TAG, "Location permissions were NOT granted.");
+                updateGpsTv(getString(R.string.errorePermessi) + " GPS");
+                tvGpsValues.setVisibility(View.VISIBLE);
             }
 
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
+    }
+
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+
     }
 }

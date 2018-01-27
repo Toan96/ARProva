@@ -16,10 +16,10 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.example.antonio.arprova.MapFragment;
 import com.example.antonio.arprova.R;
 import com.example.antonio.arprova.UpdateUICallback;
-
-import java.util.Locale;
+import com.example.antonio.arprova.Utils;
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -44,18 +44,11 @@ public class MyGPSLocation {
         @Override
         public void onLocationChanged(Location location) {
             Log.d("gps: ", "location changed");
-            final double longitude = location.getLongitude();
-            final double latitude = location.getLatitude();
-            final double altitude = location.getAltitude();
-            final double bearing = location.getBearing();
-            final double accuracy = location.getAccuracy();
             startIntentService(location);
-            final String values = "Alt: " + String.format(Locale.getDefault(), "%.1f", altitude) + " m" + System.getProperty("line.separator") +
-                    "Lat: " + String.format(Locale.getDefault(), "%.4f", latitude) + System.getProperty("line.separator") +
-                    "Lon: " + String.format(Locale.getDefault(), "%.4f", longitude);
-
-            updateUICallback.updateGpsTv(values);
-            Log.d("gps values changed", values + " Bear: " + String.format("%.2f", bearing) + " Accu: " + String.format("%.2f", accuracy));
+            updateUICallback.updateGpsTv(Utils.formattedValues(location));
+            MapFragment.setCamera(location);
+            //TODO da migliorare esce troppo spesso e poco chiaro. oppure visibile seekzoom
+            //Toast.makeText(context.getApplicationContext(), R.string.explain_zoom, Toast.LENGTH_LONG).show();
         }
 
         @Override
@@ -114,7 +107,6 @@ public class MyGPSLocation {
         return isLocationEnabled();
     }
 
-    //TODO da rivedere magari migliorare, per ora sembra funzionare
     private void showAlert() {
         if (null == dialog) {
             dialog = new AlertDialog.Builder(context);
@@ -142,6 +134,7 @@ public class MyGPSLocation {
 
             }
         });
+        dialog.setCancelable(false);
         dialog.show();
     }
 
@@ -173,7 +166,7 @@ public class MyGPSLocation {
         return null;
     }
 
-    //to take address
+    //methods to take address
 
     /**
      * Creates an intent, adds location data to it as an extra, and starts the intent service for
