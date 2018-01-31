@@ -8,4 +8,6 @@ package com.example.antonio.arprova;
 public interface UpdateUICallback {
 
     void updateGpsTv(String values);
+
+    void updateSeekZoom(int zoom);
 }

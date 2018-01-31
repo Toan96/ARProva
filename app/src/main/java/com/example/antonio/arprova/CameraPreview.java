@@ -65,7 +65,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
         if (null != c) {
             Log.d(TAG, "getCameraInstance: camera NOT null, setting parameters..");
-            //TODO: forse inutile
+            //forse inutile
             // get Camera parameters
             Camera.Parameters params = c.getParameters();
 
@@ -221,7 +221,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             ex.printStackTrace();
         }
 
-        //TODO exception in silvcell e emu
+        //check if exception in silvcell e emu
         int orientation = calculatePreviewOrientation(context);
         mCamera.setDisplayOrientation(orientation);
 

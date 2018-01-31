@@ -24,5 +24,9 @@
     <string name="address_found">Indirizzo trovato</string>
     <string name="errorePermessiCamera">Errore, permessi camera necessari</string>
     <string name="explain_zoom">scorrere su e giu a destra per zoom</string>
+    <string name="createdBehavior">com.example.antonio.arprova.MoveUpwardBehavior</string>
+    <string name="errorePermessiGPS">Errore,\npermessi necessari\nper utilizzare il GPS</string>
+    <string name="noCompass">Il tuo dispositivo non possiede una bussolaYour device is not equipped with a compass</string>
+    <string name="checkConnection">Controlla la tua connessione</string>
     <!-- Waiting for gps values… -->
 </resources>

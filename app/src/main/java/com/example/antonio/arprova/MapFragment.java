@@ -19,7 +19,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.VisibleRegion;
+//TODO set tilt 30/45
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -32,16 +35,19 @@ import com.google.android.gms.maps.model.LatLng;
  */
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
-    static final int DEFAULT_ZOOM = 2;
+    public static final int MAX_ZOOM_SEEK = 5;
+    static final int DEFAULT_ZOOM = 11;
     static final int MAX_ZOOM = 16;
-    static final int MIN_ZOOM = 0;
+    static final int MIN_ZOOM = 11;
     static GoogleMap map;
     static boolean first = true;
+    static boolean mapReady = false;
+    static boolean zooming = false;
     MapView mapView;
     private OnFragmentInteractionListener mListener;//penso servirà
 
     public MapFragment() {
-        // Required empty public constructor
+        // Required empty public constructor»
     }
 
     /**
@@ -64,20 +70,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     public static void setCamera(Location location) {
         if (null != map) {
+            CameraUpdate cameraUpdate;
             if (null != location && first) {
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAX_ZOOM);
-                map.animateCamera(cameraUpdate);
+                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAX_ZOOM);
                 first = false;
             } else if ((null != location) && !first) {
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(), location.getLongitude()));
-                map.animateCamera(cameraUpdate);
+                cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(), location.getLongitude()));
             } else {
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.51), DEFAULT_ZOOM);
-                map.animateCamera(cameraUpdate);
+                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.49), DEFAULT_ZOOM);
             }
             if (!map.isMyLocationEnabled()) {
                 map.setMyLocationEnabled(true);
             }
+            map.moveCamera(cameraUpdate);//oppure animate
         }
     }
 
@@ -95,6 +100,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        mapReady = false;
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_map, container, false);//null o container?
 
@@ -113,18 +119,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return v;
     }
 
-    /*
-
-        public void onButtonPressed(Uri uri) {
-            if (mListener != null) {
-                mListener.onFragmentInteraction(uri);
-            }
-        }
-    */
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
@@ -168,7 +165,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mapView.onLowMemory();
     }
 
-
     @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(final GoogleMap map) {
@@ -179,9 +175,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         map.setMinZoomPreference(MIN_ZOOM);
         map.setMaxZoomPreference(MAX_ZOOM);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            Log.d("OnMapReady: ", "Not Android M, set my location enabled");
             map.setMyLocationEnabled(true);
         } else {
-            //TODO non sposta la mappa set mylocation sopra M.. lo farà solo onLocationChanged
             if (this.getContext().checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                     this.getContext().checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 map.setMyLocationEnabled(true);
@@ -189,18 +185,62 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         }
         map.getUiSettings().setMyLocationButtonEnabled(false);
-        map.getUiSettings().setCompassEnabled(true);
+        map.getUiSettings().setCompassEnabled(false);
         map.getUiSettings().setAllGesturesEnabled(false);
         map.getUiSettings().setZoomControlsEnabled(false);
         map.getUiSettings().setMapToolbarEnabled(false);
         //TODO settings other maybe
+
+        mapReady = true;
     }
 
     public void SetZoomLevel(int zoomLevel) {
         if (null != map) {
-            map.animateCamera(CameraUpdateFactory.zoomTo(zoomLevel));
-            Log.d("Zoom Level changed: ", "now is " + String.valueOf(zoomLevel));
+            zooming = true;
+            Location location = map.getMyLocation();
+            if (null != location) {
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), zoomLevel + MIN_ZOOM));
+            } else {
+                map.moveCamera(CameraUpdateFactory.zoomTo(zoomLevel + MIN_ZOOM));
+            }
+            Log.d("Zoom Level changed: ", "now is " + String.valueOf(map.getCameraPosition().zoom));
+            zooming = false;
         }
+    }
+
+    public void updateCameraBearing(float bearing) {
+        if (null == map) return;
+        if (!zooming) {
+            Log.d("changing orient to : ", bearing + "");
+            CameraPosition camPos = CameraPosition
+                    .builder(
+                            map.getCameraPosition() // current Camera
+                    )
+                    .bearing(bearing)
+                    .build();
+            if (!zooming)
+                //moveCamera
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(camPos), 50, null);
+        }
+    }
+
+    public float getMapRadius() {
+        if (null != map) {
+            VisibleRegion region = map.getProjection().getVisibleRegion();
+            //calcolo la latitudine del centro e la longitutide dell'angolo in basso a sinistra,
+            // combinandoli ottengo raggio.
+            double centerLat = region.latLngBounds.getCenter().latitude;
+            double leftLong = region.latLngBounds.southwest.longitude;
+            Location MiddleLeftCornerLocation = new Location("corner");
+            MiddleLeftCornerLocation.setLatitude(centerLat);
+            MiddleLeftCornerLocation.setLongitude(leftLong);
+            Location center = new Location("center");
+            center.setLatitude(region.latLngBounds.getCenter().latitude);
+            center.setLongitude(region.latLngBounds.getCenter().longitude);
+            float distance = center.distanceTo(MiddleLeftCornerLocation); //calculate distane between middleLeftcorner and center
+            return distance;
+        }
+        return 0;
     }
 
     /**

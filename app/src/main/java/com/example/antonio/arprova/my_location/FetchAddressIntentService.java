@@ -1,4 +1,4 @@
-package com.example.antonio.arprova.myLocation;
+package com.example.antonio.arprova.my_location;
 
 import android.app.IntentService;
 import android.content.Intent;
@@ -31,7 +31,7 @@ public class FetchAddressIntentService extends IntentService {
     static final int FAILURE_RESULT = 1;
 
     private static final String PACKAGE_NAME =
-            "com.example.antonio.arprova.myLocation";
+            "com.example.antonio.arprova.my_location";
 
     static final String RECEIVER = PACKAGE_NAME + ".MyGPSLocation";
 

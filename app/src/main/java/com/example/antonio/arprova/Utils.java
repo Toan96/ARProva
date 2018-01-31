@@ -15,13 +15,14 @@ import java.util.Locale;
 
 public class Utils {
 
-    protected static final int MY_PERMISSIONS_REQUEST_ACCESS_CAMERA = 123;
-    protected static final int MY_PERMISSIONS_REQUEST_ACCESS_LOC = 321;
-    protected static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
+    static final int MY_PERMISSIONS_REQUEST_ACCESS_CAMERA = 123;
+    static final int MY_PERMISSIONS_REQUEST_ACCESS_LOC = 321;
+    //  static final float SMOOTHING_FACTOR_COMPASS = 0.8f;
+    static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
 
     //to take margin in pixels.
-    public static int dpToPixels(Context context, int dpValue) {
+    static int dpToPixels(Context context, int dpValue) {
         float d = context.getResources().getDisplayMetrics().density;
         return (int) (dpValue * d); // margin in pixels
     }
@@ -44,18 +45,43 @@ public class Utils {
     }
 
     //to verify multiple location permissions.
-    public static boolean verifyPermissions(int[] grantResults) {
+    static boolean verifyPermissions(int[] grantResults) {
         // At least one result must be checked.
         if (grantResults.length < 1) {
+            Log.d("grantResults length: ", "too short " + grantResults.length);
             return false;
         }
 
         // Verify that each required permission has been granted, otherwise return false.
         for (int result : grantResults) {
             if (result != PackageManager.PERMISSION_GRANTED) {
+                Log.d("grantResults: ", result + " NOT granted");
                 return false;
             }
         }
+        Log.d("grantResults:", "ALL permissions granted");
         return true;
+    }
+
+    static String formatBearing(float baseAzimuth) {
+        //Set the field
+        String bearingText;
+        if (baseAzimuth > 360)
+            baseAzimuth = baseAzimuth % 361;
+
+        if ((360 >= baseAzimuth && baseAzimuth >= 337.5) || (0 <= baseAzimuth && baseAzimuth <= 22.5))
+            bearingText = "N";
+        else if (baseAzimuth > 22.5 && baseAzimuth < 67.5) bearingText = "NE";
+        else if (baseAzimuth >= 67.5 && baseAzimuth <= 112.5) bearingText = "E";
+        else if (baseAzimuth > 112.5 && baseAzimuth < 157.5) bearingText = "SE";
+        else if (baseAzimuth >= 157.5 && baseAzimuth <= 202.5) bearingText = "S";
+        else if (baseAzimuth > 202.5 && baseAzimuth < 247.5) bearingText = "SW";
+        else if (baseAzimuth >= 247.5 && baseAzimuth <= 292.5) bearingText = "W";
+        else if (baseAzimuth > 292.5 && baseAzimuth < 337.5) bearingText = "NW";
+        else bearingText = "?";
+
+        //fieldBearing.setText(bearingText);
+        Log.i("Utils: format bearing", "rotation sensor azimuth " + baseAzimuth + ": " + bearingText);
+        return (int) baseAzimuth + "° " + bearingText;
     }
 }

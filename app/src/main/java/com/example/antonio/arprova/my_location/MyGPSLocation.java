@@ -1,4 +1,4 @@
-package com.example.antonio.arprova.myLocation;
+package com.example.antonio.arprova.my_location;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -31,6 +31,7 @@ public class MyGPSLocation {
     private static final long MIN_TIME = 15 * 1000;
     private static final long MIN_DISTANCE = 10;
     private static String TAG = "MyGPSLocation";
+    private static boolean first = true;
     private Context context;
     private LocationManager locationManager;
     private AddressResultReceiver mResultReceiver = new AddressResultReceiver(new Handler());
@@ -46,9 +47,11 @@ public class MyGPSLocation {
             Log.d("gps: ", "location changed");
             startIntentService(location);
             updateUICallback.updateGpsTv(Utils.formattedValues(location));
+            if (first) {
+                updateUICallback.updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
+                first = false;
+            }
             MapFragment.setCamera(location);
-            //TODO da migliorare esce troppo spesso e poco chiaro. oppure visibile seekzoom
-            //Toast.makeText(context.getApplicationContext(), R.string.explain_zoom, Toast.LENGTH_LONG).show();
         }
 
         @Override

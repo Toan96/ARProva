@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- per mappa -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -22,8 +23,8 @@
     <!-- per camera -->
     <uses-feature
         android:name="android.hardware.camera"
-        android:required="true" /> <!-- TODO: forse inutile, ma può essere anche piu specifico nelle feature.
-        TODO: verificare uses-feature e required vari-->
+        android:required="true" /> <!-- forse inutile, ma può essere anche piu specifico nelle feature.
+        verificare uses-feature e required vari-->
 
     <!-- per gps -->
     <uses-feature
@@ -59,7 +60,7 @@
         </activity>
 
         <service
-            android:name=".myLocation.FetchAddressIntentService"
+            android:name=".my_location.FetchAddressIntentService"
             android:exported="false" />
     </application>
 </manifest>
