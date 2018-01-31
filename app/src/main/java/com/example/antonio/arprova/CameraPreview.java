@@ -1,5 +1,6 @@
 package com.example.antonio.arprova;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -19,10 +20,12 @@ import java.util.List;
  */
 
 
-// for better camera size see https://github.com/pikanji/CameraPreviewSample/blob/master/src/net/pikanji/camerapreviewsample/CameraPreview.java
+// for better camera size see
+// https://github.com/pikanji/CameraPreviewSample/blob/master/src/net/pikanji/camerapreviewsample/CameraPreview.java
+@SuppressLint("ViewConstructor")//da verificare, per ora non serve
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
-    private static String TAG = "CameraPreview";
+    private static final String TAG = "CameraPreview";
     private SurfaceHolder mHolder;
     private Context context;
     private Camera mCamera;
@@ -34,7 +37,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         if (camera == null) {
             return;
         }
-
         mCamera = camera;
         Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(0, mCameraInfo);
@@ -44,6 +46,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         mHolder = getHolder();
         mHolder.addCallback(this);
         // deprecated setting, but required on Android versions prior to 3.0
+        //noinspection deprecation
         mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
     }
 
@@ -68,7 +71,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             //forse inutile
             // get Camera parameters
             Camera.Parameters params = c.getParameters();
-
             List<String> focusModes = params.getSupportedFocusModes();
             if (focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
                 // Autofocus mode is supported
@@ -79,7 +81,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             }
             //fine forse inutile
         }
-
         return c; // returns null if camera is unavailable
     }
 
@@ -121,7 +122,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 degrees = 270;
                 break;
         }
-
         int result;
 
         if (mCameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
@@ -130,7 +130,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         } else {  // back-facing*/
             result = (mCameraInfo.orientation - degrees + 360) % 360;
         }
-
         return result;
     }
 
@@ -142,7 +141,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 mCamera = getCameraInstance(getContext());
                 Camera.CameraInfo mCameraInfo = new Camera.CameraInfo();
                 Camera.getCameraInfo(0, mCameraInfo);
-
             }
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
@@ -216,15 +214,13 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 parameters.setPreviewSize(480, 320);
             }
             mCamera.setParameters(parameters);
-
         } catch (Exception ex) {
             ex.printStackTrace();
         }
 
-        //check if exception in silvcell e emu
+        //TODO check if exception in silvcell e emu
         int orientation = calculatePreviewOrientation(context);
         mCamera.setDisplayOrientation(orientation);
-
         // start preview with new settings
         try {
             mCamera.setPreviewDisplay(mHolder);

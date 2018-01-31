@@ -30,7 +30,7 @@ public class MyGPSLocation {
 
     private static final long MIN_TIME = 15 * 1000;
     private static final long MIN_DISTANCE = 10;
-    private static String TAG = "MyGPSLocation";
+    private static final String TAG = "MyGPSLocation";
     private static boolean first = true;
     private Context context;
     private LocationManager locationManager;
@@ -47,6 +47,7 @@ public class MyGPSLocation {
             Log.d("gps: ", "location changed");
             startIntentService(location);
             updateUICallback.updateGpsTv(Utils.formattedValues(location));
+            //serve altrimenti o aggiorna sempre zoom al massimo o non lo fa mai
             if (first) {
                 updateUICallback.updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
                 first = false;
@@ -68,17 +69,15 @@ public class MyGPSLocation {
 
         @Override
         public void onProviderDisabled(String s) {
-            Log.d("gps: ", "disabled");
-            String string = context.getString(R.string.tvGpsValuesHint);
-            updateUICallback.updateGpsTv(string);
-            Log.d(TAG, "updated tvGpsValues");
+            Log.d("gps: ", "disabled, setting waiting message GPS");
+            updateUICallback.updateGpsTv(context.getString(R.string.tvGpsValuesHint));
             Toast.makeText(context.getApplicationContext(), R.string.dialogLocation_Title, Toast.LENGTH_SHORT).show();
         }
     };
 
-    public MyGPSLocation(Context context, UpdateUICallback uiCallback) {
+    public MyGPSLocation(Context context) {
         this.context = context;
-        this.updateUICallback = uiCallback;
+        this.updateUICallback = (UpdateUICallback) context;
         this.locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
     }
 
@@ -170,7 +169,6 @@ public class MyGPSLocation {
     }
 
     //methods to take address
-
     /**
      * Creates an intent, adds location data to it as an extra, and starts the intent service for
      * fetching an address.

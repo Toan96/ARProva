@@ -17,7 +17,7 @@ public class Utils {
 
     static final int MY_PERMISSIONS_REQUEST_ACCESS_CAMERA = 123;
     static final int MY_PERMISSIONS_REQUEST_ACCESS_LOC = 321;
-    //  static final float SMOOTHING_FACTOR_COMPASS = 0.8f;
+    //    static final float SMOOTHING_FACTOR_COMPASS = 0.8f;
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
 
@@ -67,10 +67,10 @@ public class Utils {
         //Set the field
         String bearingText;
         if (baseAzimuth > 360)
-            baseAzimuth = baseAzimuth % 361;
+            baseAzimuth %= 361;
 
         if ((360 >= baseAzimuth && baseAzimuth >= 337.5) || (0 <= baseAzimuth && baseAzimuth <= 22.5))
-            bearingText = "N";
+            bearingText = "N";//N
         else if (baseAzimuth > 22.5 && baseAzimuth < 67.5) bearingText = "NE";
         else if (baseAzimuth >= 67.5 && baseAzimuth <= 112.5) bearingText = "E";
         else if (baseAzimuth > 112.5 && baseAzimuth < 157.5) bearingText = "SE";
@@ -80,8 +80,7 @@ public class Utils {
         else if (baseAzimuth > 292.5 && baseAzimuth < 337.5) bearingText = "NW";
         else bearingText = "?";
 
-        //fieldBearing.setText(bearingText);
-        Log.i("Utils: format bearing", "rotation sensor azimuth " + baseAzimuth + ": " + bearingText);
+        //Log.i("Utils: format bearing", "rotation sensor azimuth " + baseAzimuth + ": " + bearingText);
         return (int) baseAzimuth + "° " + bearingText;
     }
 }

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -22,7 +21,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.VisibleRegion;
-//TODO set tilt 30/45
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -35,19 +33,16 @@ import com.google.android.gms.maps.model.VisibleRegion;
  */
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
-    public static final int MAX_ZOOM_SEEK = 5;
+    public static final int MAX_ZOOM_SEEK = 5;//necessary in another package
     static final int DEFAULT_ZOOM = 11;
     static final int MAX_ZOOM = 16;
     static final int MIN_ZOOM = 11;
-    static GoogleMap map;
     static boolean first = true;
-    static boolean mapReady = false;
-    static boolean zooming = false;
+    static GoogleMap map;
     MapView mapView;
-    private OnFragmentInteractionListener mListener;//penso servirà
+    private OnFragmentInteractionListener mListener;
 
-    public MapFragment() {
-        // Required empty public constructor»
+    public MapFragment() {// Required empty public constructor
     }
 
     /**
@@ -58,12 +53,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      */
     public static MapFragment newInstance() {
         MapFragment fragment = new MapFragment();
-        /*
+/*
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
-        */
+*/
         return fragment;
     }
 
@@ -77,42 +72,40 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             } else if ((null != location) && !first) {
                 cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(), location.getLongitude()));
             } else {
-                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.49), DEFAULT_ZOOM);
+                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.49), DEFAULT_ZOOM); //Roma, Colosseo
             }
             if (!map.isMyLocationEnabled()) {
                 map.setMyLocationEnabled(true);
             }
-            map.moveCamera(cameraUpdate);//oppure animate
+            map.moveCamera(cameraUpdate); //oppure animate ma crea maggiori problemi a causa della durata
         }
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        /*
+/*
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        */
+*/
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        mapReady = false;
         // Inflate the layout for this fragment
-        View v = inflater.inflate(R.layout.fragment_map, container, false);//null o container?
+        View v = inflater.inflate(R.layout.fragment_map, container, false);
 
+        //noinspection deprecation
         int statusCode = com.google.android.gms.common.GooglePlayServicesUtil.isGooglePlayServicesAvailable(this.getActivity());
         Log.d("MapFragment: ", "Connection Result = " + statusCode);
 
         // Gets the MapView from the XML layout and creates it
         mapView = v.findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
-
         mapView.getMapAsync(this);
-
         // Needs to call MapsInitializer before doing any CameraUpdateFactory calls
         try {
             MapsInitializer.initialize(this.getActivity());
@@ -189,39 +182,44 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         map.getUiSettings().setAllGesturesEnabled(false);
         map.getUiSettings().setZoomControlsEnabled(false);
         map.getUiSettings().setMapToolbarEnabled(false);
-        //TODO settings other maybe
 
-        mapReady = true;
+        setCamera(MainActivity.lastKnown);//maybe better solution.
+        mListener.updateSeekZoom(MAX_ZOOM_SEEK);
     }
 
     public void SetZoomLevel(int zoomLevel) {
         if (null != map) {
-            zooming = true;
-            Location location = map.getMyLocation();
+            Location location;
+            //noinspection deprecation
+            try {
+                //first time can't access map location
+                //noinspection deprecation
+                location = map.getMyLocation();
+            } catch (RuntimeException e) {
+                location = MainActivity.lastKnown;
+            }
             if (null != location) {
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), zoomLevel + MIN_ZOOM));
+                Log.d("MapFragment: ", "SetZoomLevel with location");
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(),
+                        location.getLongitude()), zoomLevel + MIN_ZOOM));
             } else {
+                Log.d("MapFragment: ", "SetZoomLevel without location");
                 map.moveCamera(CameraUpdateFactory.zoomTo(zoomLevel + MIN_ZOOM));
             }
-            Log.d("Zoom Level changed: ", "now is " + String.valueOf(map.getCameraPosition().zoom));
-            zooming = false;
+            Log.d("Zoom Level changed: ", "now on map is " + String.valueOf(map.getCameraPosition().zoom));
         }
     }
 
     public void updateCameraBearing(float bearing) {
         if (null == map) return;
-        if (!zooming) {
-            Log.d("changing orient to : ", bearing + "");
-            CameraPosition camPos = CameraPosition
-                    .builder(
-                            map.getCameraPosition() // current Camera
-                    )
-                    .bearing(bearing)
-                    .build();
-            if (!zooming)
-                //moveCamera
-                map.animateCamera(CameraUpdateFactory.newCameraPosition(camPos), 50, null);
-        }
+//        Log.d("changing orient to : ", bearing + "");
+        CameraPosition camPos = CameraPosition
+                .builder(
+                        map.getCameraPosition() // current Camera
+                )
+                .bearing(bearing)
+                .build();
+        map.moveCamera(CameraUpdateFactory.newCameraPosition(camPos));
     }
 
     public float getMapRadius() {
@@ -237,8 +235,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             Location center = new Location("center");
             center.setLatitude(region.latLngBounds.getCenter().latitude);
             center.setLongitude(region.latLngBounds.getCenter().longitude);
-            float distance = center.distanceTo(MiddleLeftCornerLocation); //calculate distane between middleLeftcorner and center
-            return distance;
+            return center.distanceTo(MiddleLeftCornerLocation); //return distance between middleLeftCorner and center
         }
         return 0;
     }
@@ -254,6 +251,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      * >Communicating with Other Fragments</a> for more information.
      */
     public interface OnFragmentInteractionListener {
-        void onFragmentInteraction(Uri uri);
+
+        void updateSeekZoom(int zoom);
     }
 }

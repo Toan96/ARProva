@@ -3,7 +3,6 @@ package com.example.antonio.arprova;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.Sensor;
@@ -11,9 +10,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,7 +25,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.antonio.arprova.my_location.MyGPSLocation;
 
@@ -42,7 +37,8 @@ import static com.example.antonio.arprova.CameraPreview.getCameraInstance;
 
 public class MainActivity extends AppCompatActivity implements UpdateUICallback, MapFragment.OnFragmentInteractionListener {
 
-    private static String TAG = "MainActivity";
+    private static final String TAG = "MainActivity";
+    static Location lastKnown = null;
     private Runnable runnable;
     private Handler handler;
     private FrameLayout preview;
@@ -57,16 +53,15 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private VerticalSeekBar seekZoom;
     private SensorManager sensorManager;
     private SensorEventListener sensorEventListener;
+/*
+    private Sensor mSensorAccel;
+    private Sensor mSensorMagneticField;
+    private float compass_last_measured_bearing = 0;
+*/
 
-    /*
-        private Sensor mSensorAccel;
-        private Sensor mSensorMagneticField;
-        private float compass_last_measured_bearing = 0;
-    */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         //Remove title bar
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         //Remove notification bar
@@ -81,23 +76,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         tvDistance = findViewById(R.id.tvDistance);
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-
         sensorEventListener = new SensorEventListener() {
             @Override
             public void onSensorChanged(SensorEvent event) {
-                handler = new Handler();
-                final SensorEvent e = event;
-                runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        while (MapFragment.zooming) {
-                            //waiting
-                            Log.d("waiting for zooming: ", "...");
-                        }
-                        updateBearing(e);
-                    }
-                };
-                handler.postDelayed(runnable, 2000);
+                updateBearing(event);
             }
 
             @Override
@@ -109,28 +91,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         // perform seek bar change listener event used for getting the progress value
         seekZoom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
-            @SuppressLint("SetTextI18n")
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (null != mapFragment) {
                     mapFragment.SetZoomLevel(progress);
-                    final int distance = (int) mapFragment.getMapRadius();
-                    //to wait for map zoom update
-                    handler = new Handler();
-                    runnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if (distance == 0) {
-                                //do nothing, use ?
-                            } else if (distance > 1000) {
-                                int dist = distance / 1000;
-                                tvDistance.setText(dist + " km");
-                            } else {
-                                tvDistance.setText(distance + " m");
-                            }
-                        }
-                    };
-                    handler.postDelayed(runnable, 200);
-
+                    updateDistance(mapFragment.getMapRadius());
                 }
             }
 
@@ -142,36 +106,12 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         });
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (null != myGPSLocation)
-            myGPSLocation.removeHandler();
-        //handler per snackbar
-        if (handler != null && runnable != null) {
-            handler.removeCallbacks(runnable);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (null != myGPSLocation)
-            myGPSLocation.stopUpdates();
-        if (null != mPreview)
-            mPreview.releaseCamera();              // release the camera immediately on pause event
-        if (null != mapContainer) {
-            getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
-        }
-        sensorManager.unregisterListener(sensorEventListener);
-    }
-
     //used onStart to avoid onResume loop on asking permissions
     @Override
     protected void onStart() {
         super.onStart();
         Log.d("onStart: ", "entering..");
-
+        //show layout, if necessary check camera permission.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Log.d(TAG, "API 23+: need check permission for camera");
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -192,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             Log.d(TAG, "API 22 or less: not need to check runtime permission for camera");
             showLayout();
         }
-
+        //show location, if necessary check location permissions.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Log.d(TAG, "API 23+: need check permissions for location");
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
@@ -214,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             Log.d(TAG, "API 22 or less: not need to check runtime permissions for location");
             showLocation();
         }
-
+        //check num of active threads
         Log.d(TAG, "numThreads: " + Thread.activeCount());
     }
 
@@ -222,7 +162,36 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     protected void onResume() {
         super.onResume();
         initSensors();
-        //se solo on pause la camera si blocca
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        sensorManager.unregisterListener(sensorEventListener);
+        //need to do before onSaveInstanceState
+        if (null != mapContainer) {
+            getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        //in onStop supports notifications overlay
+        super.onStop();
+        if (null != myGPSLocation)
+            myGPSLocation.stopUpdates();
+        if (null != mPreview)
+            mPreview.releaseCamera(); // release the camera immediately on pause event
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (null != myGPSLocation)
+            myGPSLocation.removeHandler();
+        if (handler != null && runnable != null) {
+            handler.removeCallbacks(runnable);
+        }
     }
 
     @Override
@@ -235,42 +204,27 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         seekZoom.setProgressAndThumb(zoom);
     }
 
+    @SuppressLint("SetTextI18n")
+    public void updateDistance(float mapRadius) {
+        int distance = (int) mapRadius;
+        //noinspection StatementWithEmptyBody
+        if (distance == 0) {
+            //maybe do nothing, use ~ by static layout
+        } else if (distance > 1000) {
+            distance /= 1000;
+            tvDistance.setText("~" + distance + " km");
+        } else {
+            tvDistance.setText("~" + ((distance + 5) / 10) * 10 + " m"); //round to 10th
+        }
+    }
+
     private void showLocation() {
-        myGPSLocation = new MyGPSLocation(this, this);
-        Location lastKnown = myGPSLocation.getBestLastKnownLocation();
+        myGPSLocation = new MyGPSLocation(this);
+        lastKnown = myGPSLocation.getBestLastKnownLocation();
         if (lastKnown != null) {
             myGPSLocation.startIntentService(lastKnown);
             Log.d("gps: ", "used lastKnownLocation");
             tvGpsValues.setText(Utils.formattedValues(lastKnown));
-            final Location lastK = lastKnown;
-            handler = new Handler();
-            runnable = new Runnable() {
-                @Override
-                public void run() {
-                    //in questo modo non dovrebbe bloccarsi in waiting for map
-                    ConnectivityManager cm =
-                            (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                    NetworkInfo activeNetwork = cm != null ? cm.getActiveNetworkInfo() : null;
-                    boolean isConnected = activeNetwork != null &&
-                            activeNetwork.isConnectedOrConnecting();
-                    if (isConnected) {
-                        int i = 0;
-                        while (!MapFragment.mapReady) {
-                            //waiting
-                            i++;
-                            Log.d("waiting for map: ", "...");
-                            if (i > 10000) break;
-                        }
-                        Log.d("post delayed: ", "setCamera");
-                        seekZoom.setProgressAndThumb(MapFragment.MAX_ZOOM_SEEK);
-                        MapFragment.setCamera(lastK);
-                    } else {
-                        Toast.makeText(getApplicationContext(), R.string.checkConnection, Toast.LENGTH_SHORT).show();
-                    }
-                }
-            };
-            handler.postDelayed(runnable, 1000);
-
         } else {
             tvGpsValues.setText(R.string.tvGpsValuesHint);
             Log.d("gps: ", "no last known position");
@@ -283,11 +237,9 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private void showLayout() {
         // Create an instance of Camera
         Camera mCamera = getCameraInstance(getApplicationContext());
-
         // Create the Preview view and set it as the content of this Activity.
         mPreview = new CameraPreview(this, mCamera);
         preview.addView(mPreview);
-        MapFragment.first = true;
         //layout container need to stay up. bring to up other subViews.
         coordinatorLayout.bringToFront();
         seekZoom.bringToFront();
@@ -301,18 +253,18 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         //add map fragment
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
-        mapContainer.setOnClickListener(new View.OnClickListener() {
+/*TODO        mapContainer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 showMap();
             }
         });
-
+*/
         mapFragment = MapFragment.newInstance();
         getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commit();
     }
 
-    //TODO
+    //TODO zoom map on click
     private void showMap() {
         Log.d(TAG, "show map");
         if (mapContainer.getWidth() == Utils.dpToPixels(this, 100)) {
@@ -473,7 +425,6 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     @TargetApi(23)
     private void requestCameraPermission() {
         Log.i(TAG, "CAMERA permission has NOT been granted. Requesting permission.");
-
         if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
             // Provide an additional rationale to the user if the permission was not granted
             // and the user would benefit from additional context for the use of the permission.
@@ -575,7 +526,6 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             }
         } else if (requestCode == Utils.MY_PERMISSIONS_REQUEST_ACCESS_LOC) {
             Log.i(TAG, "Received response for location permissions request.");
-
             // requested multiple permissions for location, so all of them need to be
             // checked.
             if (Utils.verifyPermissions(grantResults)) {
@@ -611,14 +561,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 };
                 handler.postDelayed(runnable, 2000);
             }
-
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
-    }
-
-    @Override
-    public void onFragmentInteraction(Uri uri) {
-
     }
 }

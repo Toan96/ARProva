@@ -1,5 +1,6 @@
 package com.example.antonio.arprova;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
@@ -33,6 +34,7 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
 
     @Override
     protected synchronized void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        //noinspection SuspiciousNameCombination
         super.onMeasure(heightMeasureSpec, widthMeasureSpec);
         setMeasuredDimension(getMeasuredHeight(), getMeasuredWidth());
     }
@@ -40,7 +42,6 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
     protected void onDraw(Canvas c) {
         c.rotate(-90);
         c.translate(-getHeight(), 0);
-
         super.onDraw(c);
     }
 
@@ -49,12 +50,13 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
         this.onChangeListener = onChangeListener;
     }
 
+    //touch perform non dovrebbe essere necessario per la seekBar
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (!isEnabled()) {
             return false;
         }
-
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 onChangeListener.onStartTrackingTouch(this);
@@ -64,7 +66,6 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
             case MotionEvent.ACTION_MOVE:
                 super.onTouchEvent(event);
                 int progress = getMax() - (int) (getMax() * event.getY() / getHeight());
-
                 // Ensure progress stays within boundaries
                 if (progress < 0) {
                     progress = 0;
@@ -78,7 +79,6 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
                     lastProgress = progress;
                     onChangeListener.onProgressChanged(this, progress, true);
                 }
-
                 onSizeChanged(getWidth(), getHeight(), 0, 0);
                 setPressed(true);
                 setSelected(true);
@@ -106,7 +106,7 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
             onChangeListener.onProgressChanged(this, progress, true);
         }
     }
-
+/*
     public synchronized int getMaximum() {
         return getMax();
     }
@@ -114,4 +114,5 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
     public synchronized void setMaximum(int maximum) {
         setMax(maximum);
     }
+*/
 }
