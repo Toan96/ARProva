@@ -23,6 +23,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -93,7 +94,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
 
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (null != mapFragment) {
-                    mapFragment.SetZoomLevel(progress);
+                    mapFragment.setZoomLevel(progress);
                     updateDistance(mapFragment.getMapRadius());
                 }
             }
@@ -162,6 +163,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     protected void onResume() {
         super.onResume();
         initSensors();
+        if (null == mapFragment) {
+            mapFragment = MapFragment.newInstance();
+            getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();
+        }
     }
 
     @Override
@@ -171,6 +176,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         //need to do before onSaveInstanceState
         if (null != mapContainer) {
             getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
+            mapFragment = null;
         }
     }
 
@@ -202,6 +208,22 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     @Override
     public void updateSeekZoom(int zoom) {
         seekZoom.setProgressAndThumb(zoom);
+    }
+
+    @Override
+    public void showMap() {
+        if (null != mapFragment) {
+            Log.d(TAG, "show map");
+            if (mapContainer.getWidth() == Utils.dpToPixels(this, 100)) {
+                mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, 400),
+                        Utils.dpToPixels(this, 500)));
+                tvBearing.setVisibility(View.INVISIBLE);
+            } else {
+                mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, 100),
+                        Utils.dpToPixels(this, 100)));
+                tvBearing.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -249,32 +271,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         tvBearing.setVisibility(View.VISIBLE);
         seekZoom.setVisibility(View.VISIBLE);
         seekZoom.setProgressAndThumb(0);
-
-        //add map fragment
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
-/*TODO        mapContainer.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showMap();
-            }
-        });
-*/
         mapFragment = MapFragment.newInstance();
         getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commit();
-    }
-
-    //TODO zoom map on click
-    private void showMap() {
-        Log.d(TAG, "show map");
-        if (mapContainer.getWidth() == Utils.dpToPixels(this, 100)) {
-            mapContainer.setLayoutParams(new FrameLayout.LayoutParams(Utils.dpToPixels(this, 400),
-                    Utils.dpToPixels(this, 500)));
-            mapContainer.bringToFront();
-        } else {
-            mapContainer.setLayoutParams(new FrameLayout.LayoutParams(Utils.dpToPixels(this, 100),
-                    Utils.dpToPixels(this, 100)));
-        }
     }
 
     private void initSensors() {

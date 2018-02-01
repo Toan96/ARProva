@@ -20,6 +20,7 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 
 /**
@@ -31,7 +32,7 @@ import com.google.android.gms.maps.model.VisibleRegion;
  * Use the {@link MapFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class MapFragment extends Fragment implements OnMapReadyCallback {
+public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
     public static final int MAX_ZOOM_SEEK = 5;//necessary in another package
     static final int DEFAULT_ZOOM = 11;
@@ -183,11 +184,24 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         map.getUiSettings().setZoomControlsEnabled(false);
         map.getUiSettings().setMapToolbarEnabled(false);
 
-        setCamera(MainActivity.lastKnown);//maybe better solution.
+        setCamera(MainActivity.lastKnown);  //maybe better solution.
+        setZoomLevel(MAX_ZOOM_SEEK);        //maybe better solution.
         mListener.updateSeekZoom(MAX_ZOOM_SEEK);
+
+        //use setTag on marker to link with a place
+        for (Place p : Utils.mockPlaces) {
+            Log.d("MapFragment: ", "adding markers.. " + p.getLatitude() + ", " + p.getLongitude());
+            map.addMarker(new MarkerOptions()
+                    .position(new LatLng(p.getLatitude(), p.getLongitude()))
+                    .title(p.getNome())
+
+            );
+        }
+        map.setOnMapClickListener(this);
+//      map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
     }
 
-    public void SetZoomLevel(int zoomLevel) {
+    public void setZoomLevel(int zoomLevel) {
         if (null != map) {
             Location location;
             //noinspection deprecation
@@ -229,15 +243,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             // combinandoli ottengo raggio.
             double centerLat = region.latLngBounds.getCenter().latitude;
             double leftLong = region.latLngBounds.southwest.longitude;
-            Location MiddleLeftCornerLocation = new Location("corner");
-            MiddleLeftCornerLocation.setLatitude(centerLat);
-            MiddleLeftCornerLocation.setLongitude(leftLong);
+            Location middleLeftCornerLocation = new Location("corner");
+            middleLeftCornerLocation.setLatitude(centerLat);
+            middleLeftCornerLocation.setLongitude(leftLong);
             Location center = new Location("center");
             center.setLatitude(region.latLngBounds.getCenter().latitude);
             center.setLongitude(region.latLngBounds.getCenter().longitude);
-            return center.distanceTo(MiddleLeftCornerLocation); //return distance between middleLeftCorner and center
+            return center.distanceTo(middleLeftCornerLocation); //return distance between middleLeftCorner and center
         }
         return 0;
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {
+        if (null != map) {
+            Log.d("MapFragment: ", "Click on map");
+            mListener.showMap();
+        }
     }
 
     /**
@@ -253,5 +275,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public interface OnFragmentInteractionListener {
 
         void updateSeekZoom(int zoom);
+
+        void showMap();
     }
 }

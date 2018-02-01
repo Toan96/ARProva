@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.util.Log;
 
+import java.util.ArrayList;
 import java.util.Locale;
 
 /**
@@ -17,6 +18,14 @@ public class Utils {
 
     static final int MY_PERMISSIONS_REQUEST_ACCESS_CAMERA = 123;
     static final int MY_PERMISSIONS_REQUEST_ACCESS_LOC = 321;
+
+    public static ArrayList<Place> mockPlaces = new ArrayList<Place>() {{
+        add(new Place("Mensa Universitaria", 40.7729432, 14.7938988));
+        add(new Place("Biblioteca Scientifica", 40.7724951, 14.7889083));
+        add(new Place("Piazza del Sapere", 40.7705566, 14.7924083));
+        add(new Place("Bar Saperi & Sapori", 40.7752657, 14.7883457));
+    }};
+
     //    static final float SMOOTHING_FACTOR_COMPASS = 0.8f;
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
