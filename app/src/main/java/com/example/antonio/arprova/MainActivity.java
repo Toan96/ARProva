@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.hardware.Camera;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -20,6 +21,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Surface;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -39,7 +41,6 @@ import static com.example.antonio.arprova.CameraPreview.getCameraInstance;
 public class MainActivity extends AppCompatActivity implements UpdateUICallback, MapFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
-    static Location lastKnown = null;
     private Runnable runnable;
     private Handler handler;
     private FrameLayout preview;
@@ -54,11 +55,9 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private VerticalSeekBar seekZoom;
     private SensorManager sensorManager;
     private SensorEventListener sensorEventListener;
-/*
-    private Sensor mSensorAccel;
-    private Sensor mSensorMagneticField;
     private float compass_last_measured_bearing = 0;
-*/
+    private float[] mAccel = null, mMagnetic = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             @Override
             public void onSensorChanged(SensorEvent event) {
                 updateBearing(event);
+                //Utils.setCurrentBearing need to do in updateBearing method
             }
 
             @Override
@@ -95,7 +95,9 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (null != mapFragment) {
                     mapFragment.setZoomLevel(progress);
-                    updateDistance(mapFragment.getMapRadius());
+                    float visibleDistance = mapFragment.getMapRadius();
+                    updateDistance(visibleDistance);
+                    Utils.visibleDistance = visibleDistance;
                 }
             }
 
@@ -173,6 +175,9 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     protected void onPause() {
         super.onPause();
         sensorManager.unregisterListener(sensorEventListener);
+        if (handler != null && runnable != null) {
+            handler.removeCallbacks(runnable);
+        }
         //need to do before onSaveInstanceState
         if (null != mapContainer) {
             getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
@@ -195,9 +200,6 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         super.onDestroy();
         if (null != myGPSLocation)
             myGPSLocation.removeHandler();
-        if (handler != null && runnable != null) {
-            handler.removeCallbacks(runnable);
-        }
     }
 
     @Override
@@ -211,49 +213,82 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     }
 
     @Override
+    @SuppressLint("SetTextI18n")
+    public void updateDistance(float mapRadius) {
+        tvDistance.setText(Utils.formatDistance(mapRadius));
+    }
+
+    @Override
     public void showMap() {
         if (null != mapFragment) {
             Log.d(TAG, "show map");
-            if (mapContainer.getWidth() == Utils.dpToPixels(this, 100)) {
-                mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, 400),
-                        Utils.dpToPixels(this, 500)));
+            if (mapContainer.getWidth() == Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN)) {
+                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                    mapContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                            Utils.dpToPixels(this, Utils.BIG_MAP_DIMEN_PORTRAIT)));
+                } else if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, Utils.BIG_MAP_DIMEN_LAND),
+                            Utils.dpToPixels(this, Utils.BIG_MAP_DIMEN_LAND))); //no match_parent
+                }
                 tvBearing.setVisibility(View.INVISIBLE);
             } else {
-                mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, 100),
-                        Utils.dpToPixels(this, 100)));
+                mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN),
+                        Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN)));
                 tvBearing.setVisibility(View.VISIBLE);
             }
+            mapFragment.switchCompassOnMap();
         }
     }
 
-    @SuppressLint("SetTextI18n")
-    public void updateDistance(float mapRadius) {
-        int distance = (int) mapRadius;
-        //noinspection StatementWithEmptyBody
-        if (distance == 0) {
-            //maybe do nothing, use ~ by static layout
-        } else if (distance > 1000) {
-            distance /= 1000;
-            tvDistance.setText("~" + distance + " km");
-        } else {
-            tvDistance.setText("~" + ((distance + 5) / 10) * 10 + " m"); //round to 10th
-        }
-    }
-
+    //search for location, if not lastKnown try to get location from map after some time
+    //for map to obtain location (google is faster than me).
     private void showLocation() {
-        myGPSLocation = new MyGPSLocation(this);
-        lastKnown = myGPSLocation.getBestLastKnownLocation();
-        if (lastKnown != null) {
+        myGPSLocation = new MyGPSLocation(this, mapFragment);
+        Location lastKnown = myGPSLocation.getBestLastKnownLocation();
+        if (null != lastKnown) {
             myGPSLocation.startIntentService(lastKnown);
             Log.d("gps: ", "used lastKnownLocation");
             tvGpsValues.setText(Utils.formattedValues(lastKnown));
+            Utils.myLocation = lastKnown;
+            mapFragment.setCamera(lastKnown);
+            updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
+            handler = new Handler();
+            runnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (null != mapFragment)
+                        updateDistance(mapFragment.getMapRadius());
+                }
+            };
+            handler.postDelayed(runnable, 3000);
         } else {
             tvGpsValues.setText(R.string.tvGpsValuesHint);
             Log.d("gps: ", "no last known position");
+            handler = new Handler();
+            runnable = new Runnable() {
+                @Override
+                public void run() {
+                    Log.d("post delayed: ", "search for map location..");
+                    Location l = mapFragment.getMapLocation();
+                    if (null != l) {
+                        updateGpsTv(Utils.formattedValues(l));
+                        Log.d("gps: ", "used location from map.getMyLocation");
+                        myGPSLocation.startIntentService(l);
+                        Utils.myLocation = l;
+                        mapFragment.setCamera(l);
+                        updateDistance(mapFragment.getMapRadius());
+                        updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
+                    }
+                }
+            };
+            handler.postDelayed(runnable, 8000);
         }
         Log.d(TAG, "updated tvGpsValues");
         tvGpsValues.setVisibility(View.VISIBLE);
         myGPSLocation.takeLocationUpdates();
+
+        //start AsyncTask for drawing AR places
+        new PlaceDrawerASync().execute(getApplicationContext());
     }
 
     private void showLayout() {
@@ -274,66 +309,62 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
         mapFragment = MapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commit();
+        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss(); //needs for >M.
     }
 
     private void initSensors() {
         if (sensorManager != null) {
-/*            mSensorAccel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            mSensorMagneticField = sensorManager
-                    .getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-
+            Sensor mSensorAccel = null, mSensorMagneticField = null;
+//            mSensorAccel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//            mSensorMagneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
             if ((mSensorAccel != null) && (mSensorMagneticField != null)) {
-            /* Initialize the gravity sensor */
-/*                if (mSensorAccel != null) {
+            /* Initialize the accel sensor */
+                //noinspection ConstantConditions
+                if (mSensorAccel != null) {
                     Log.i(TAG, "Accel sensor available. (TYPE_ACCELEROMETER)");
                     sensorManager.registerListener(sensorEventListener,
                             mSensorAccel, SensorManager.SENSOR_DELAY_UI);
                 } else {
                     Log.i(TAG, "Accel sensor unavailable. (TYPE_ACCELEROMETER)");
                 }
-
             /* Initialize the magnetic field sensor */
-/*               if (mSensorMagneticField != null) {
+                //noinspection ConstantConditions
+                if (mSensorMagneticField != null) {
                     Log.i(TAG, "Magnetic field sensor available. (TYPE_MAGNETIC_FIELD)");
                     sensorManager.registerListener(sensorEventListener,
                             mSensorMagneticField, SensorManager.SENSOR_DELAY_UI);
                 } else {
-                    Log.i(TAG,
-                            "Magnetic field sensor unavailable. (TYPE_MAGNETIC_FIELD)");
+                    Log.i(TAG, "Magnetic field sensor unavailable. (TYPE_MAGNETIC_FIELD)");
                 }
             } else {
-*/
-            Log.i(TAG,
-                    "Deprecated use: (TYPE_ORIENTATION)");
-            //noinspection deprecation
-            sensorManager.registerListener(sensorEventListener,
-                    sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
-                    SensorManager.SENSOR_DELAY_UI);
-//           }
+                Log.i(TAG, "Deprecated use: (TYPE_ORIENTATION)");
+                //noinspection deprecation
+                sensorManager.registerListener(sensorEventListener,
+                        sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+                        SensorManager.SENSOR_DELAY_UI);
+            }
         }
     }
 
     private void updateBearing(SensorEvent event) {
 /*
-        float[] mAccel = null, mMagnetic = null;
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             mAccel = event.values.clone();
-        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            mMagnetic = event.values.clone();
+            Log.i(TAG, "Accel sensor event taken, values: " + mAccel[0] + ", " + mAccel[1] + ", " + mAccel[2]);
         }
-
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            mMagnetic = event.values.clone();
+            Log.i(TAG, "magnet sensor event taken, values: " + mMagnetic[0] + ", " + mMagnetic[1] + ", " + mMagnetic[2]);
+        }
+*/
         if ((mAccel != null) && (mMagnetic != null)) {
-
-            /* Create rotation Matrix */
-        //need inclination matrix in future.
-/*            float[] rotationMatrix = new float[9];
-            if (SensorManager.getRotationMatrix(rotationMatrix, null,
+            float[] rotationMatrix = new float[9];
+            float[] inclinationMatrix = new float[9]; //remap inclination and decomment
+            if (!SensorManager.getRotationMatrix(rotationMatrix, inclinationMatrix,
                     mAccel, mMagnetic)) {
-
+                Log.d("Getting rot matrix: ", "DONE");
                 /* Compensate device orientation */
-        // http://android-developers.blogspot.de/2010/09/one-screen-turn-deserves-another.html
-/*                float[] remappedRotationMatrix = new float[9];
+                float[] remappedRotationMatrix = new float[9];
                 switch (getWindowManager().getDefaultDisplay()
                         .getRotation()) {
                     case Surface.ROTATION_0:
@@ -363,18 +394,21 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 }
 
                 /* Calculate Orientation */
-/*                float results[] = new float[3];
+                float orientation[] = new float[3];
                 SensorManager.getOrientation(remappedRotationMatrix,
-                        results);
-
+                        orientation);
+                //float inclination = SensorManager.getInclination(inclinationMatrix);
+                Log.d("orientation values: ", orientation[0] + ", " + orientation[1] + ", " + orientation[2]);
                 /* Get measured value */
-/*               float current_measured_bearing = (float) (results[0] * 180 / Math.PI);
+                float current_measured_bearing = (float) (orientation[0] * 180 / Math.PI);
                 if (current_measured_bearing < 0) {
                     current_measured_bearing += 360;
                 }
 
+                Log.d("current_meas_bearing: ", "is: " + current_measured_bearing);
+
                 /* Smooth values using a 'Low Pass Filter' */
-/*               current_measured_bearing = current_measured_bearing
+                current_measured_bearing = current_measured_bearing
                         + Utils.SMOOTHING_FACTOR_COMPASS
                         * (current_measured_bearing - compass_last_measured_bearing);
 
@@ -382,39 +416,43 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                  * Update variables for next use (Required for Low Pass
                  * Filter)
                  */
-//               compass_last_measured_bearing = current_measured_bearing;
+                compass_last_measured_bearing = current_measured_bearing;
 
                 /* Update normal output */
-//              tvBearing.setText(Utils.formatBearing(current_measured_bearing));
+                tvBearing.setText(Utils.formatBearing(current_measured_bearing));
 
                 /*
                 Update map camera rotation.
                 */
-//               mapFragment.updateCameraBearing(current_measured_bearing);
-//           }
-//       } else {
-        //for old devices
-        float bearing = 0;
-        //Log.d("event values: ", event.values[0] + ", " + event.values[1] + ", " + event.values[2]);
-        //for screen adjustment
-        switch (getWindowManager().getDefaultDisplay()
-                .getRotation()) {
-            case Surface.ROTATION_0:
-                bearing = event.values[0];
-                break;
-            case Surface.ROTATION_90:
-                bearing = event.values[0] + 90;
-                break;
-            case Surface.ROTATION_180:
-                bearing = event.values[0] + 180;
-                break;
-            case Surface.ROTATION_270:
-                bearing = event.values[0] + 270;
-                break;
+                mapFragment.updateCameraBearing(current_measured_bearing);
+                Utils.currentBearing = current_measured_bearing;
+            } else {
+                Log.e("Rotation matrix", "error creating rotation matrix");
+            }
+        } else {
+            //for old devices
+            float bearing = 0;
+//          Log.d("event values: ", event.values[0] + ", " + event.values[1] + ", " + event.values[2]);
+            //for screen adjustment
+            switch (getWindowManager().getDefaultDisplay()
+                    .getRotation()) {
+                case Surface.ROTATION_0:
+                    bearing = event.values[0];
+                    break;
+                case Surface.ROTATION_90:
+                    bearing = event.values[0] + 90;
+                    break;
+                case Surface.ROTATION_180:
+                    bearing = event.values[0] + 180;
+                    break;
+                case Surface.ROTATION_270:
+                    bearing = event.values[0] + 270;
+                    break;
+            }
+            tvBearing.setText(Utils.formatBearing(bearing));
+            mapFragment.updateCameraBearing(bearing);
+            Utils.currentBearing = bearing;
         }
-        tvBearing.setText(Utils.formatBearing(bearing));
-        mapFragment.updateCameraBearing(bearing);
-//       }
     }
 
     /**
@@ -514,7 +552,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 Log.i(TAG, "CAMERA permission was NOT granted.");
                 coordinatorLayout.bringToFront();
                 errCamera.setVisibility(View.VISIBLE);
-
+                errCamera.bringToFront();
                 handler = new Handler();
                 runnable = new Runnable() {
                     @Override

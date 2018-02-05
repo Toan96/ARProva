@@ -18,8 +18,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 
@@ -34,7 +36,7 @@ import com.google.android.gms.maps.model.VisibleRegion;
  */
 public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
-    public static final int MAX_ZOOM_SEEK = 5;//necessary in another package
+    public static final int MAX_ZOOM_SEEK = 5; //necessary in another package
     static final int DEFAULT_ZOOM = 11;
     static final int MAX_ZOOM = 16;
     static final int MIN_ZOOM = 11;
@@ -61,25 +63,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         fragment.setArguments(args);
 */
         return fragment;
-    }
-
-    @SuppressLint("MissingPermission")
-    public static void setCamera(Location location) {
-        if (null != map) {
-            CameraUpdate cameraUpdate;
-            if (null != location && first) {
-                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAX_ZOOM);
-                first = false;
-            } else if ((null != location) && !first) {
-                cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(), location.getLongitude()));
-            } else {
-                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.49), DEFAULT_ZOOM); //Roma, Colosseo
-            }
-            if (!map.isMyLocationEnabled()) {
-                map.setMyLocationEnabled(true);
-            }
-            map.moveCamera(cameraUpdate); //oppure animate ma crea maggiori problemi a causa della durata
-        }
     }
 
     @Override
@@ -184,9 +167,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         map.getUiSettings().setZoomControlsEnabled(false);
         map.getUiSettings().setMapToolbarEnabled(false);
 
-        setCamera(MainActivity.lastKnown);  //maybe better solution.
-        setZoomLevel(MAX_ZOOM_SEEK);        //maybe better solution.
-        mListener.updateSeekZoom(MAX_ZOOM_SEEK);
+        setCamera(Utils.myLocation);  //in questo modo se c'è myLocation verrà anche centrato sulla mappa (altrimenti mi porta sul mare)
+        mListener.updateDistance(getMapRadius()); //forse non necessario
+        if (null != Utils.myLocation) {
+            setZoomLevel(MAX_ZOOM_SEEK); //per sicurezza e per evitare solo "~ km" in tvDistance
+            mListener.updateSeekZoom(MAX_ZOOM_SEEK);
+        }
 
         //use setTag on marker to link with a place
         for (Place p : Utils.mockPlaces) {
@@ -194,23 +180,62 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             map.addMarker(new MarkerOptions()
                     .position(new LatLng(p.getLatitude(), p.getLongitude()))
                     .title(p.getNome())
-
+                    .icon(BitmapDescriptorFactory.fromBitmap(Utils.changeBitmapColor(getResources(), p.getColor())))
             );
         }
         map.setOnMapClickListener(this);
+        map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                Log.d("MapFragment: ", "Click on map");
+                mListener.showMap();
+                return true;
+            }
+        });
 //      map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {
+        if (null != map) {
+            Log.d("MapFragment: ", "Click on map");
+            mListener.showMap();
+        }
+    }
+
+    public void setCamera(Location location) {
+        if (null != map) {
+            CameraUpdate cameraUpdate;
+            if (null != location && first) {
+                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAX_ZOOM);
+                first = false;
+            } else if ((null != location) && !first) {
+                cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(), location.getLongitude()));
+            } else {
+                cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.49), DEFAULT_ZOOM); //Roma, Colosseo
+            }
+            map.moveCamera(cameraUpdate); //oppure animate ma crea maggiori problemi a causa della durata
+
+            if (!map.isMyLocationEnabled()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (getContext().checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                            getContext().checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                        return;
+                }
+                map.setMyLocationEnabled(true);
+            }
+        }
     }
 
     public void setZoomLevel(int zoomLevel) {
         if (null != map) {
             Location location;
-            //noinspection deprecation
             try {
                 //first time can't access map location
                 //noinspection deprecation
                 location = map.getMyLocation();
             } catch (RuntimeException e) {
-                location = MainActivity.lastKnown;
+                location = Utils.myLocation;
             }
             if (null != location) {
                 Log.d("MapFragment: ", "SetZoomLevel with location");
@@ -254,11 +279,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         return 0;
     }
 
-    @Override
-    public void onMapClick(LatLng latLng) {
+    public Location getMapLocation() {
+        try {
+            //noinspection deprecation
+            return map.getMyLocation();
+        } catch (RuntimeException e) {
+            Log.d("MapFragment: ", "getMapLocation Exception raised");
+            return null;
+        }
+    }
+
+    public void switchCompassOnMap() {
         if (null != map) {
-            Log.d("MapFragment: ", "Click on map");
-            mListener.showMap();
+            if (map.getUiSettings().isCompassEnabled()) {
+                map.getUiSettings().setCompassEnabled(false);
+            } else {
+                map.getUiSettings().setCompassEnabled(true);
+            }
         }
     }
 
@@ -275,6 +312,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     public interface OnFragmentInteractionListener {
 
         void updateSeekZoom(int zoom);
+
+        void updateDistance(float mapRadius);
 
         void showMap();
     }

@@ -28,5 +28,6 @@
     <string name="errorePermessiGPS">Errore,\npermessi necessari\nper utilizzare il GPS</string>
     <string name="noCompass">Il tuo dispositivo non possiede una bussolaYour device is not equipped with a compass</string>
     <string name="checkConnection">Controlla la tua connessione</string>
+    <string name="default_distance">~ km</string>
     <!-- Waiting for gps values… -->
 </resources>

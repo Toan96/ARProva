@@ -1,25 +1,35 @@
 package com.example.antonio.arprova;
 
+import android.graphics.Color;
 import android.location.Location;
+
+import java.io.Serializable;
+import java.util.Random;
 
 /**
  * Created by Antonio on 01/02/2018.
  * .
  */
 
-public class Place {
+public class Place implements Serializable {
 
     private String nome;
     private Location locationData;
+    private int color;
 
-    public Place(String nome, double lat, double lng) {
+    Place(String nome, double lat, double lng) {
         this.nome = nome;
         this.locationData = new Location("mockProvider");
         locationData.setLatitude(lat);
         locationData.setLongitude(lng);
+        Random rand = new Random();
+        int r = rand.nextInt(255);
+        int g = rand.nextInt(255);
+        int b = rand.nextInt(255);
+        this.color = Color.rgb(r, g, b);
     }
 
-    public String getNome() {
+    String getNome() {
         return nome;
     }
 
@@ -27,7 +37,7 @@ public class Place {
         this.nome = nome;
     }
 
-    public Location getLocationData() {
+    Location getLocationData() {
         return locationData;
     }
 
@@ -35,11 +45,19 @@ public class Place {
         this.locationData = locationData;
     }
 
-    public double getLatitude() {
+    public int getColor() {
+        return color;
+    }
+
+    public void setColor(int color) {
+        this.color = color;
+    }
+
+    double getLatitude() {
         return this.locationData.getLatitude();
     }
 
-    public double getLongitude() {
+    double getLongitude() {
         return this.locationData.getLongitude();
     }
 }

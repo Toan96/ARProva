@@ -31,7 +31,8 @@ public class MyGPSLocation {
     private static final long MIN_TIME = 15 * 1000;
     private static final long MIN_DISTANCE = 10;
     private static final String TAG = "MyGPSLocation";
-    private static boolean first = true;
+    static boolean first = true;
+    private final MapFragment mapFragment;
     private Context context;
     private LocationManager locationManager;
     private AddressResultReceiver mResultReceiver = new AddressResultReceiver(new Handler());
@@ -52,7 +53,8 @@ public class MyGPSLocation {
                 updateUICallback.updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
                 first = false;
             }
-            MapFragment.setCamera(location);
+            mapFragment.setCamera(location);
+            Utils.myLocation = location;
         }
 
         @Override
@@ -75,13 +77,15 @@ public class MyGPSLocation {
         }
     };
 
-    public MyGPSLocation(Context context) {
+    public MyGPSLocation(Context context, MapFragment mapFragment) {
         this.context = context;
         this.updateUICallback = (UpdateUICallback) context;
         this.locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        this.mapFragment = mapFragment;
     }
 
     //metodi per gps
+    //se chiudo dialog e dopo time richiama metodo anche se presente Utils.myLocation cerca una nuova posizione.
     @SuppressLint("MissingPermission")
     public void takeLocationUpdates() {
         if (!checkLocation())
