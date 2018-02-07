@@ -4,8 +4,17 @@
     android:id="@+id/camera_preview"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="@android:color/darker_gray"
     android:baselineAligned="false"
     tools:context=".MainActivity">
+
+    <FrameLayout
+        android:id="@+id/overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
+
+    </FrameLayout>
 
     <android.support.design.widget.CoordinatorLayout
         android:id="@+id/coordinatorLayout"
@@ -28,11 +37,11 @@
                 android:layout_marginEnd="5dp"
                 android:layout_marginRight="5dp"
                 android:layout_weight="2"
-                android:shadowColor="#000000"
+                android:shadowColor="@android:color/black"
                 android:shadowRadius="0.2"
                 android:text="@string/tvGpsValuesHint"
                 android:textAlignment="viewStart"
-                android:textColor="#cecece" />
+                android:textColor="@color/colorTextTv" />
 
             <FrameLayout
                 android:id="@+id/mapContainer"
@@ -52,11 +61,11 @@
             android:layout_gravity="bottom|end"
             android:layout_margin="10dp"
             android:maxWidth="110dp"
-            android:shadowColor="#000000"
+            android:shadowColor="@android:color/black"
             android:shadowRadius="0.2"
             android:text="@string/errorePermessiCamera"
             android:textAlignment="viewEnd"
-            android:textColor="#cecece"
+            android:textColor="@color/colorTextTv"
             android:visibility="gone" />
 
         <TextView
@@ -67,11 +76,11 @@
             android:layout_marginBottom="110dp"
             android:layout_marginEnd="67dp"
             android:layout_marginRight="67dp"
-            android:shadowColor="#000000"
+            android:shadowColor="@android:color/black"
             android:shadowRadius="0.2"
             android:text="50° NE"
             android:textAlignment="viewEnd"
-            android:textColor="#cecece"
+            android:textColor="@color/colorTextTv"
             android:visibility="invisible"
             tools:ignore="HardcodedText" />
 
@@ -99,11 +108,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
-                android:shadowColor="#000000"
+                android:shadowColor="@android:color/black"
                 android:shadowRadius="0.2"
                 android:text="@string/default_distance"
                 android:textAlignment="viewEnd"
-                android:textColor="#cecece"
+                android:textColor="@color/colorTextTv"
                 android:visibility="invisible" />
 
         </LinearLayout>

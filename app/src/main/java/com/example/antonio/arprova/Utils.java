@@ -7,7 +7,6 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.LightingColorFilter;
 import android.graphics.Paint;
@@ -33,7 +32,7 @@ public class Utils {
     public static Location myLocation = null;
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
-    static float BEARING_OFFSET = 28f; //degrees
+    static float BEARING_OFFSET = 28f; //28 degrees is default before getViewAngle
     static float visibleDistance;
     static float currentBearing;
     static ArrayList<Place> mockPlaces = new ArrayList<Place>() {{
@@ -41,6 +40,7 @@ public class Utils {
         add(new Place("Biblioteca Scientifica", 40.7724951, 14.7889083));
         add(new Place("Piazza del Sapere", 40.7705566, 14.7924083));
         add(new Place("Bar Saperi & Sapori", 40.7752657, 14.7883457));
+        add(new Place("Pizzeria Sant'Antonio", 40.3405952, 15.3346918));
     }};
 
     //to take margin in pixels.
@@ -119,40 +119,20 @@ public class Utils {
         }
     }
 
-    //todo da sistemare
     //to change color of a place marker
     static Bitmap changeBitmapColor(Resources res, int color) {
-        int strokeWidth = 5;
+        int dim = 20; //dimension in pixel of a map marker;
         //cambio colore con filter
         Bitmap sourceBitmap = BitmapFactory.decodeResource(res,
                 R.drawable.base_marker);
-        Bitmap resultBitmap = Bitmap.createBitmap(sourceBitmap, 0, 0,
-                sourceBitmap.getWidth() - 1, sourceBitmap.getHeight() - 1);
+        Bitmap resultBitmap = Bitmap.createScaledBitmap(sourceBitmap, dim, dim, false);
         Paint p = new Paint();
         ColorFilter filter = new LightingColorFilter(color, 0);
         p.setColorFilter(filter);
         Canvas canvas = new Canvas(resultBitmap);
         canvas.drawBitmap(resultBitmap, 0, 0, p);
-        //fine cambio colore con filter
-
-        //inizio ad aggiungere stroke
-        Bitmap resultWithStroke = Bitmap.createBitmap(sourceBitmap.getWidth() - 1 + strokeWidth,
-                sourceBitmap.getHeight() - 1 + strokeWidth, Bitmap.Config.ARGB_8888);
-
-        p = new Paint();
-        p.setStyle(Paint.Style.STROKE);
-        p.setColor(Color.BLACK);
-        p.setStrokeWidth(strokeWidth);
-        p.setAntiAlias(true);
-        canvas = new Canvas(resultWithStroke);
-        canvas.drawCircle(canvas.getWidth() - strokeWidth / 2, canvas.getWidth() - strokeWidth / 2,
-                canvas.getWidth() - strokeWidth / 2, p); //tutto sbagliato ma bello
-//        canvas.drawCircle(((canvas.getWidth()) - (2 * strokeWidth)) / 2, ((canvas.getHeight()) - (2 * strokeWidth)) / 2,
-//                ((canvas.getWidth()) - (2 * strokeWidth)) / 2, p);
-        canvas.drawBitmap(resultBitmap, strokeWidth, strokeWidth, null);
-        //fine aggiunta stroke
         //to free memory
         sourceBitmap.recycle();
-        return resultWithStroke;
+        return resultBitmap;
     }
 }

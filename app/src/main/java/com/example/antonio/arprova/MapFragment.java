@@ -55,25 +55,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
      * @return A new instance of fragment MapFragment.
      */
     public static MapFragment newInstance() {
-        MapFragment fragment = new MapFragment();
+//        MapFragment fragment = new MapFragment();
 /*
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
 */
-        return fragment;
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-/*
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
-*/
+        return new MapFragment();//fragment;
     }
 
     @Override
@@ -167,10 +156,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         map.getUiSettings().setZoomControlsEnabled(false);
         map.getUiSettings().setMapToolbarEnabled(false);
 
-        setCamera(Utils.myLocation);  //in questo modo se c'è myLocation verrà anche centrato sulla mappa (altrimenti mi porta sul mare)
+        setCamera(Utils.myLocation);  //in questo modo se c'è myLocation verra anche centrato sulla mappa (altrimenti mi porta sul mare)
         mListener.updateDistance(getMapRadius()); //forse non necessario
         if (null != Utils.myLocation) {
-            setZoomLevel(MAX_ZOOM_SEEK); //per sicurezza e per evitare solo "~ km" in tvDistance
+            setZoomLevel(MAX_ZOOM_SEEK); //serve non toccare per sicurezza e forse per evitare solo "~ km" in tvDistance
             mListener.updateSeekZoom(MAX_ZOOM_SEEK);
         }
 
@@ -218,9 +207,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
             if (!map.isMyLocationEnabled()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (getContext().checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                            getContext().checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-                        return;
+                    if (null != getContext()) {
+                        if (getContext().checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                                getContext().checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                            return;
+                    } else return;
                 }
                 map.setMyLocationEnabled(true);
             }
@@ -251,7 +242,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
     public void updateCameraBearing(float bearing) {
         if (null == map) return;
-//        Log.d("changing orient to : ", bearing + "");
         CameraPosition camPos = CameraPosition
                 .builder(
                         map.getCameraPosition() // current Camera
@@ -264,7 +254,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     public float getMapRadius() {
         if (null != map) {
             VisibleRegion region = map.getProjection().getVisibleRegion();
-            //calcolo la latitudine del centro e la longitutide dell'angolo in basso a sinistra,
+            //calcolo la latitudine del centro e la longitudine dell'angolo in basso a sinistra,
             // combinandoli ottengo raggio.
             double centerLat = region.latLngBounds.getCenter().latitude;
             double leftLong = region.latLngBounds.southwest.longitude;

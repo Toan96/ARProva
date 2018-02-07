@@ -16,6 +16,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.example.antonio.arprova.MainActivity;
 import com.example.antonio.arprova.MapFragment;
 import com.example.antonio.arprova.R;
 import com.example.antonio.arprova.UpdateUICallback;
@@ -31,7 +32,7 @@ public class MyGPSLocation {
     private static final long MIN_TIME = 15 * 1000;
     private static final long MIN_DISTANCE = 10;
     private static final String TAG = "MyGPSLocation";
-    static boolean first = true;
+    public static boolean first = true;
     private final MapFragment mapFragment;
     private Context context;
     private LocationManager locationManager;
@@ -53,7 +54,7 @@ public class MyGPSLocation {
                 updateUICallback.updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
                 first = false;
             }
-            mapFragment.setCamera(location);
+            mapFragment.setCamera(location);//setZoomLevel sembra non serva
             Utils.myLocation = location;
         }
 
@@ -85,7 +86,6 @@ public class MyGPSLocation {
     }
 
     //metodi per gps
-    //se chiudo dialog e dopo time richiama metodo anche se presente Utils.myLocation cerca una nuova posizione.
     @SuppressLint("MissingPermission")
     public void takeLocationUpdates() {
         if (!checkLocation())
@@ -99,7 +99,7 @@ public class MyGPSLocation {
         criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
         String provider = locationManager.getBestProvider(criteria, true);
         if (provider != null) {
-            //forse qui veniva chiamato troppe volte inutilmente(impossibile vedere). removeupdates per evitare (spero).
+            //forse qui veniva chiamato troppe volte inutilmente(impossibile vedere). removeUpdates per evitare (spero).
             locationManager.removeUpdates(locationListener);
             locationManager.requestLocationUpdates(provider, MIN_TIME, MIN_DISTANCE, locationListener);
             Log.d("Best location provider", provider);
@@ -134,6 +134,9 @@ public class MyGPSLocation {
                     @Override
                     public void run() {
                         takeLocationUpdates();
+                        ((MainActivity) context).checkExistingPosition(); //dopo perche takeLoc mostra dialog
+                        //ma dovrebbe funzionare in ogni caso, infatti existing position vengono mostrate solo se gps enabled
+                        //quindi, quando non verra mostrato dialog
                     }
                 };
                 handler.postDelayed(runnable, 7000);

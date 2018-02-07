@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LookARound</string>
+    <string name="toast_cameraError">Si è verificato un errore con la fotocamera</string>
+    <string name="dialogLocation_Title">Abilita geolocalizzazione</string>
+    <!-- Enable Location , Your Locations Settings is set to 'Off'.\nPlease Enable Location to " +
+            "use this app , Location Settings, Cancel -->
+    <string name="dialogLocation_Message">La geolocalizzazione è disattivata.\nAbilitala per utilizzare questa applicazione.</string>
+    <string name="dialogLocation_Positive">Apri impostazioni</string>
+    <string name="dialogLocation_Negative">Chiudi</string>
+    <string name="tvGpsValuesHint">In attesa del segnale gps…</string>
+    <string name="toast_cameraNotFound">Ops..sembra che manchi la fotocamera</string>
+    <string name="dialog_permission_allow">OK</string>
+    <string name="explain_permission_fine_location">Permessi necessari per posizione</string>
+    <string name="explain_permission_camera">Permessi necessari per fotocamera</string>
+    <string name="no_location_data_provided">Errore provider di locazione</string>
+    <string name="service_not_available">Servizio non disponibile</string>
+    <string name="invalid_lat_long_used">Lat e Long usati non validi</string>
+    <string name="no_address_found">Nessun indirizzo trovato</string>
+    <string name="address_found">Indirizzo trovato</string>
+    <string name="errorePermessiCamera">Errore, permessi camera necessari</string>
+    <string name="errorePermessiGPS">Errore,\npermessi necessari\nper utilizzare il GPS</string>
+    <string name="default_distance">~ km</string>
+</resources>

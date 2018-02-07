@@ -20,9 +20,6 @@ import java.util.List;
  * A basic Camera preview class
  */
 
-
-// for better camera size see
-// https://github.com/pikanji/CameraPreviewSample/blob/master/src/net/pikanji/camerapreviewsample/CameraPreview.java
 @SuppressLint("ViewConstructor")//da verificare, per ora non serve
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
@@ -47,8 +44,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         mHolder = getHolder();
         mHolder.addCallback(this);
         // deprecated setting, but required on Android versions prior to 3.0
-        //noinspection deprecation
-        //todo mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        //mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
     }
 
     /**
@@ -83,6 +79,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             //fine forse inutile
 
             //for correct viewing angle
+
             if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
                 float verticalViewAngle = params.getVerticalViewAngle();
                 Log.d(TAG, "verticalViewAngle: " + verticalViewAngle);
@@ -92,47 +89,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 Log.d(TAG, "horizontalViewAngle: " + horizontalViewAngle);
                 Utils.BEARING_OFFSET = horizontalViewAngle / 2;
             }
-/*            final Camera.Parameters p = params;
-            final Context context1 = context;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    double cameraSensorDiagonal = 0;
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                        Log.d(TAG, "API21+");
-                        CameraManager manager = (CameraManager) context1.getSystemService(Context.CAMERA_SERVICE);
-                        CameraCharacteristics characteristics = null;
-                        try {
-                            if (manager != null) {
-                                characteristics = manager.getCameraCharacteristics("0");
-                            }
-                        } catch (CameraAccessException e) {
-                            e.printStackTrace();
-                        }
-                        if (null != characteristics) {
-                            SizeF size = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
-                            if (size != null) {
-                                cameraSensorDiagonal = Math.sqrt((size.getHeight() * size.getHeight()) + (size.getWidth() * size.getWidth()));
-                                Log.d(TAG, "cameraSensorDiagonal: " + cameraSensorDiagonal);
-                            }
-                        }
-                        //for devices under API21
-                    } else {
-                        Log.d(TAG, "API20 or less");
-                        float focalLength = p.getFocalLength();
-                        float horizontalViewAngle = p.getHorizontalViewAngle();
-                        float verticalViewAngle = p.getVerticalViewAngle();
-                        double cameraSensorWidth = (Math.tan(horizontalViewAngle / 2)) * 2 * focalLength;
-                        double cameraSensorHeight = (Math.tan(verticalViewAngle / 2)) * 2 * focalLength;
-                        cameraSensorDiagonal = Math.sqrt((cameraSensorHeight * cameraSensorHeight) + (cameraSensorWidth * cameraSensorWidth));
-                        Log.d(TAG, "cameraSensorDiagonal: " + cameraSensorDiagonal);
-                        Log.d(TAG, "horizontalViewAngle: " + horizontalViewAngle);
-                    }
-                    Utils.BEARING_OFFSET = 2 * Math.atan(cameraSensorDiagonal / (2 * p.getFocalLength()));
-                    Log.d(TAG, "bearingOffset now: " + Utils.BEARING_OFFSET);
-                }
-            }).start();
-*/
         }
         return c; // returns null if camera is unavailable
     }
@@ -151,7 +107,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
      * Implementation is based on the sample code provided in
      * {@link Camera#setDisplayOrientation(int)}.
      */
-    public static int calculatePreviewOrientation(Context context) {
+    private static int calculatePreviewOrientation(Context context) {
         int degrees = 0;
 
         // Get the rotation of the screen to adjust the preview image accordingly.

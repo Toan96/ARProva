@@ -11,7 +11,7 @@ import android.view.MotionEvent;
  * .
  */
 
-public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar /*prima era seekbar*/ {
+public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar /*prima era seekBar*/ {
 
     private OnSeekBarChangeListener onChangeListener;
     private int lastProgress = 0;
@@ -28,8 +28,8 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
         super(context, attrs);
     }
 
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(h, w, oldh, oldw);
+    protected void onSizeChanged(int w, int h, int oldW, int oldH) {
+        super.onSizeChanged(h, w, oldH, oldW);
     }
 
     @Override

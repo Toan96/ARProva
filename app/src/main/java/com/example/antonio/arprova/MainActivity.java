@@ -1,7 +1,6 @@
 package com.example.antonio.arprova;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -11,6 +10,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -43,18 +43,17 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private static final String TAG = "MainActivity";
     private Runnable runnable;
     private Handler handler;
-    private FrameLayout preview;
+    private FrameLayout preview, overlay, mapContainer;
     private CoordinatorLayout coordinatorLayout;
-    private FrameLayout mapContainer;
     private MapFragment mapFragment;
     private CameraPreview mPreview;
     private MyGPSLocation myGPSLocation;
-    private TextView tvGpsValues;
-    private TextView tvBearing;
-    private TextView tvDistance;
+    private TextView tvGpsValues, tvBearing, tvDistance;
     private VerticalSeekBar seekZoom;
+    private AsyncTask async;
     private SensorManager sensorManager;
     private SensorEventListener sensorEventListener;
+    private boolean cameraGranted = false, locationGranted = false;
     private float compass_last_measured_bearing = 0;
     private float[] mAccel = null, mMagnetic = null;
 
@@ -66,10 +65,11 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         //Remove notification bar
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        //set no title and no notifybar before set layout
+        //set no title and no notifyBar before set layout
         setContentView(R.layout.activity_main);
 
         preview = findViewById(R.id.camera_preview);
+        overlay = findViewById(R.id.overlay);
         coordinatorLayout = findViewById(R.id.coordinatorLayout);
         tvGpsValues = findViewById(R.id.tvGpsValues);
         tvBearing = findViewById(R.id.tvBearing);
@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             public void onSensorChanged(SensorEvent event) {
                 updateBearing(event);
                 //Utils.setCurrentBearing need to do in updateBearing method
+                //chiedere di ricalibrare il sensore se necessario
             }
 
             @Override
@@ -129,11 +130,11 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 };
                 handler.postDelayed(runnable, 1000);
             } else {
-                showLayout();
+                cameraGranted = true;
             }
         } else {
             Log.d(TAG, "API 22 or less: not need to check runtime permission for camera");
-            showLayout();
+            cameraGranted = true;
         }
         //show location, if necessary check location permissions.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -151,11 +152,11 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 };
                 handler.postDelayed(runnable, 3000);
             } else {
-                showLocation();
+                locationGranted = true;
             }
         } else {
             Log.d(TAG, "API 22 or less: not need to check runtime permissions for location");
-            showLocation();
+            locationGranted = true;
         }
         //check num of active threads
         Log.d(TAG, "numThreads: " + Thread.activeCount());
@@ -164,16 +165,18 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     @Override
     protected void onResume() {
         super.onResume();
+        Log.d("onResume: ", "entering..");
+        showLayout();
+        showLocation();
         initSensors();
-        if (null == mapFragment) {
-            mapFragment = MapFragment.newInstance();
-            getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();
-        }
+        //start AsyncTask for drawing AR places
+        async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        Log.d("onPause: ", "entering..");
         sensorManager.unregisterListener(sensorEventListener);
         if (handler != null && runnable != null) {
             handler.removeCallbacks(runnable);
@@ -181,18 +184,23 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         //need to do before onSaveInstanceState
         if (null != mapContainer) {
             getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
-            mapFragment = null;
         }
+        if (null != mPreview) {
+            mPreview.releaseCamera(); // release the camera immediately on pause event
+            preview.removeView(mPreview);
+        }
+        async.cancel(true);
     }
 
     @Override
     protected void onStop() {
         //in onStop supports notifications overlay
         super.onStop();
+        Log.d("onStop: ", "entering..");
+        cameraGranted = false;
+        locationGranted = false;
         if (null != myGPSLocation)
             myGPSLocation.stopUpdates();
-        if (null != mPreview)
-            mPreview.releaseCamera(); // release the camera immediately on pause event
     }
 
     @Override
@@ -213,7 +221,6 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     }
 
     @Override
-    @SuppressLint("SetTextI18n")
     public void updateDistance(float mapRadius) {
         tvDistance.setText(Utils.formatDistance(mapRadius));
     }
@@ -222,6 +229,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     public void showMap() {
         if (null != mapFragment) {
             Log.d(TAG, "show map");
+            //se mappa piccola
             if (mapContainer.getWidth() == Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN)) {
                 if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
                     mapContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -231,33 +239,73 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                             Utils.dpToPixels(this, Utils.BIG_MAP_DIMEN_LAND))); //no match_parent
                 }
                 tvBearing.setVisibility(View.INVISIBLE);
+                //fermo async AR
+                async.cancel(true);
             } else {
+                //se mappa grande
                 mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN),
                         Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN)));
                 tvBearing.setVisibility(View.VISIBLE);
+                //riparte async AR
+                async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
             }
             mapFragment.switchCompassOnMap();
         }
     }
 
+    private void showLayout() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!cameraGranted) return;
+        }
+        // Create an instance of Camera
+        Camera mCamera = getCameraInstance(getApplicationContext());
+        // Create the Preview view and set it as the content of this Activity.
+        mPreview = new CameraPreview(this, mCamera);
+        preview.addView(mPreview);
+        //layout container need to stay up. bring to up other subViews.
+        overlay.bringToFront();// per sicurezza
+        coordinatorLayout.bringToFront();
+        seekZoom.bringToFront();
+        tvBearing.bringToFront();
+        tvDistance.bringToFront();
+        tvDistance.setVisibility(View.VISIBLE);
+        tvBearing.setVisibility(View.VISIBLE);
+        seekZoom.setVisibility(View.VISIBLE);
+        seekZoom.setProgressAndThumb(0);
+        mapContainer = findViewById(R.id.mapContainer);
+        mapContainer.setVisibility(View.VISIBLE);
+        mapFragment = MapFragment.newInstance();
+        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss(); //needs.
+    }
+
     //search for location, if not lastKnown try to get location from map after some time
     //for map to obtain location (google is faster than me).
     private void showLocation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!locationGranted) return;
+        }
         myGPSLocation = new MyGPSLocation(this, mapFragment);
+        checkExistingPosition();
+        tvGpsValues.setVisibility(View.VISIBLE);
+        myGPSLocation.takeLocationUpdates();
+    }
+
+    public void checkExistingPosition() {
         Location lastKnown = myGPSLocation.getBestLastKnownLocation();
         if (null != lastKnown) {
             myGPSLocation.startIntentService(lastKnown);
             Log.d("gps: ", "used lastKnownLocation");
             tvGpsValues.setText(Utils.formattedValues(lastKnown));
             Utils.myLocation = lastKnown;
-            mapFragment.setCamera(lastKnown);
+            mapFragment.setCamera(lastKnown); //sembra non serva setZoomLevel
             updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
+            MyGPSLocation.first = false;
             handler = new Handler();
             runnable = new Runnable() {
                 @Override
                 public void run() {
                     if (null != mapFragment)
-                        updateDistance(mapFragment.getMapRadius());
+                        updateDistance(mapFragment.getMapRadius()); //non cambiare, la mappa in updateSeekZoom potrebbe non essere pronta
                 }
             };
             handler.postDelayed(runnable, 3000);
@@ -275,41 +323,15 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                         Log.d("gps: ", "used location from map.getMyLocation");
                         myGPSLocation.startIntentService(l);
                         Utils.myLocation = l;
-                        mapFragment.setCamera(l);
-                        updateDistance(mapFragment.getMapRadius());
+                        mapFragment.setCamera(l); //sembra non serva setZoomLevel
                         updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
+                        //updateDistance(mapFragment.getMapRadius());
+                        MyGPSLocation.first = false;
                     }
                 }
             };
             handler.postDelayed(runnable, 8000);
         }
-        Log.d(TAG, "updated tvGpsValues");
-        tvGpsValues.setVisibility(View.VISIBLE);
-        myGPSLocation.takeLocationUpdates();
-
-        //start AsyncTask for drawing AR places
-        new PlaceDrawerASync().execute(getApplicationContext());
-    }
-
-    private void showLayout() {
-        // Create an instance of Camera
-        Camera mCamera = getCameraInstance(getApplicationContext());
-        // Create the Preview view and set it as the content of this Activity.
-        mPreview = new CameraPreview(this, mCamera);
-        preview.addView(mPreview);
-        //layout container need to stay up. bring to up other subViews.
-        coordinatorLayout.bringToFront();
-        seekZoom.bringToFront();
-        tvBearing.bringToFront();
-        tvDistance.bringToFront();
-        tvDistance.setVisibility(View.VISIBLE);
-        tvBearing.setVisibility(View.VISIBLE);
-        seekZoom.setVisibility(View.VISIBLE);
-        seekZoom.setProgressAndThumb(0);
-        mapContainer = findViewById(R.id.mapContainer);
-        mapContainer.setVisibility(View.VISIBLE);
-        mapFragment = MapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss(); //needs for >M.
     }
 
     private void initSensors() {
@@ -318,30 +340,27 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
 //            mSensorAccel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 //            mSensorMagneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
             if ((mSensorAccel != null) && (mSensorMagneticField != null)) {
-            /* Initialize the accel sensor */
-                //noinspection ConstantConditions
+            /* Initialize the accelerometer sensor */
                 if (mSensorAccel != null) {
                     Log.i(TAG, "Accel sensor available. (TYPE_ACCELEROMETER)");
                     sensorManager.registerListener(sensorEventListener,
-                            mSensorAccel, SensorManager.SENSOR_DELAY_UI);
+                            mSensorAccel, SensorManager.SENSOR_DELAY_UI); //almeno game, ui ha troppo delay
                 } else {
                     Log.i(TAG, "Accel sensor unavailable. (TYPE_ACCELEROMETER)");
                 }
             /* Initialize the magnetic field sensor */
-                //noinspection ConstantConditions
                 if (mSensorMagneticField != null) {
                     Log.i(TAG, "Magnetic field sensor available. (TYPE_MAGNETIC_FIELD)");
                     sensorManager.registerListener(sensorEventListener,
-                            mSensorMagneticField, SensorManager.SENSOR_DELAY_UI);
+                            mSensorMagneticField, SensorManager.SENSOR_DELAY_UI); //almeno game, ui ha troppo delay
                 } else {
                     Log.i(TAG, "Magnetic field sensor unavailable. (TYPE_MAGNETIC_FIELD)");
                 }
             } else {
                 Log.i(TAG, "Deprecated use: (TYPE_ORIENTATION)");
-                //noinspection deprecation
                 sensorManager.registerListener(sensorEventListener,
                         sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
-                        SensorManager.SENSOR_DELAY_UI);
+                        SensorManager.SENSOR_DELAY_GAME); //almeno game, ui ha troppo delay
             }
         }
     }
@@ -359,7 +378,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
 */
         if ((mAccel != null) && (mMagnetic != null)) {
             float[] rotationMatrix = new float[9];
-            float[] inclinationMatrix = new float[9]; //remap inclination and decomment
+            float[] inclinationMatrix = new float[9]; //remap inclination and de-comment
             if (!SensorManager.getRotationMatrix(rotationMatrix, inclinationMatrix,
                     mAccel, mMagnetic)) {
                 Log.d("Getting rot matrix: ", "DONE");

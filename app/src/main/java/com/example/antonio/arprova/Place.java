@@ -10,7 +10,7 @@ import java.util.Random;
  * Created by Antonio on 01/02/2018.
  * .
  */
-
+//todo indirizzo a place, prendendo dati da maps posso prenderlo direttamente credo
 public class Place implements Serializable {
 
     private String nome;
@@ -33,26 +33,29 @@ public class Place implements Serializable {
         return nome;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
+    /*
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    */
     Location getLocationData() {
         return locationData;
     }
 
-    public void setLocationData(Location locationData) {
-        this.locationData = locationData;
-    }
-
+    /*
+        public void setLocationData(Location locationData) {
+            this.locationData = locationData;
+        }
+    */
     public int getColor() {
         return color;
     }
 
-    public void setColor(int color) {
-        this.color = color;
-    }
-
+    /*
+        public void setColor(int color) {
+            this.color = color;
+        }
+    */
     double getLatitude() {
         return this.locationData.getLatitude();
     }
