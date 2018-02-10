@@ -1,7 +1,9 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -13,6 +15,9 @@ import android.graphics.Paint;
 import android.location.Location;
 import android.util.Log;
 
+import com.google.android.gms.maps.GoogleMap;
+import com.unisa_contest.toan.look_around.places.Place;
+
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -23,25 +28,36 @@ import java.util.Locale;
 
 public class Utils {
 
+    //used for permissions
     static final int MY_PERMISSIONS_REQUEST_ACCESS_CAMERA = 123;
     static final int MY_PERMISSIONS_REQUEST_ACCESS_LOC = 321;
+    //used for sensors
     static final float SMOOTHING_FACTOR_COMPASS = 0.8f; //needs between 0, 1.
+    //used for map fragment
     static final int SMALL_MAP_DIMEN = 100;
     static final int BIG_MAP_DIMEN_PORTRAIT = 500;
     static final int BIG_MAP_DIMEN_LAND = 400;
+    //used to access map from PlacesASync
+    public static GoogleMap map = null;
+    //used for AR
     public static Location myLocation = null;
+    public static float BEARING_OFFSET = 28f; //28 degrees is default before getViewAngle
+    public static float visibleDistance;
+    public static float currentBearing;
+    //mockPlaces
+    public static ArrayList<Place> places = new ArrayList<>(); /*new ArrayList<Place>(); {{
+        add(new Place("Mensa Universitaria", 40.7729432, 14.7938988, "mockAddress"));
+        add(new Place("Biblioteca Scientifica", 40.7724951, 14.7889083, "mockAddress"));
+        add(new Place("Piazza del Sapere", 40.7705566, 14.7924083, "mockAddress"));
+        add(new Place("Bar Saperi & Sapori", 40.7752657, 14.7883457, "mockAddress"));
+        add(new Place("Pizzeria Sant'Antonio", 40.3405952, 15.3346918, "mockAddress"));
+    }};
+*/
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
-    static float BEARING_OFFSET = 28f; //28 degrees is default before getViewAngle
-    static float visibleDistance;
-    static float currentBearing;
-    static ArrayList<Place> mockPlaces = new ArrayList<Place>() {{
-        add(new Place("Mensa Universitaria", 40.7729432, 14.7938988));
-        add(new Place("Biblioteca Scientifica", 40.7724951, 14.7889083));
-        add(new Place("Piazza del Sapere", 40.7705566, 14.7924083));
-        add(new Place("Bar Saperi & Sapori", 40.7752657, 14.7883457));
-        add(new Place("Pizzeria Sant'Antonio", 40.3405952, 15.3346918));
-    }};
+    static boolean BIG_MAP = false;
+    //used to draw marker
+    static Resources res;
 
     //to take margin in pixels.
     static int dpToPixels(Context context, int dpValue) {
@@ -56,7 +72,6 @@ public class Utils {
             Log.d("grantResults length: ", "too short " + grantResults.length);
             return false;
         }
-
         // Verify that each required permission has been granted, otherwise return false.
         for (int result : grantResults) {
             if (result != PackageManager.PERMISSION_GRANTED) {
@@ -81,11 +96,13 @@ public class Utils {
                 "Lon: " + String.format(Locale.getDefault(), "%.6f", longitude);
 
         Log.d("gps values changed", values + " Bear: " + String.format("%.2f", bearing) + " Accu: " + String.format("%.2f", accuracy));
-
         return values;
     }
 
     static String formatBearing(float baseAzimuth) {
+
+        if (baseAzimuth < 0)
+            baseAzimuth += 360;
         //Set the field
         String bearingText;
         if (baseAzimuth > 360)
@@ -106,7 +123,7 @@ public class Utils {
         return (int) baseAzimuth + "° " + bearingText;
     }
 
-    static String formatDistance(float baseDistance) {
+    public static String formatDistance(float baseDistance) {
         int distance = (int) baseDistance;
         if (distance == 0) {
             //do nothing, return ~ by static layout
@@ -120,7 +137,7 @@ public class Utils {
     }
 
     //to change color of a place marker
-    static Bitmap changeBitmapColor(Resources res, int color) {
+    public static Bitmap changeBitmapColor(int color) {
         int dim = 20; //dimension in pixel of a map marker;
         //cambio colore con filter
         Bitmap sourceBitmap = BitmapFactory.decodeResource(res,
@@ -134,5 +151,28 @@ public class Utils {
         //to free memory
         sourceBitmap.recycle();
         return resultBitmap;
+    }
+
+    //return URL for JSON places data
+    public static String sbMethod(Activity main, Location location) {
+        return "https://maps.googleapis.com/maps/api/place/nearbysearch/json?" + "location=" +
+                location.getLatitude() + "," + location.getLongitude() +
+                "&radius=2000" + //"&sensor=true" seems deprecated
+                "&types=" + "restaurant" +// "point_of_interest"
+                "&key=" + getMetadata(main);
+    }
+
+    //to avoid to write api key in code
+    private static String getMetadata(Context context) {
+        try {
+            ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(
+                    context.getPackageName(), PackageManager.GET_META_DATA);
+            if (appInfo.metaData != null) {
+                return appInfo.metaData.getString("com.google.android.maps.v2.API_KEY");
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            // if we can’t find it in the manifest, just return null
+        }
+        return null;
     }
 }

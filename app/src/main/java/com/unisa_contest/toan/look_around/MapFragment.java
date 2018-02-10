@@ -1,4 +1,4 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -18,11 +18,9 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 
 /**
@@ -55,8 +53,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
      * @return A new instance of fragment MapFragment.
      */
     public static MapFragment newInstance() {
-//        MapFragment fragment = new MapFragment();
-/*
+/*        MapFragment fragment = new MapFragment();
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
@@ -135,6 +132,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     @Override
     public void onMapReady(final GoogleMap map) {
         MapFragment.map = map;
+        Utils.map = map;
         // Updates the location and zoom of the MapView
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.89, 12.51), DEFAULT_ZOOM);
         map.animateCamera(cameraUpdate);
@@ -159,12 +157,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         setCamera(Utils.myLocation);  //in questo modo se c'è myLocation verra anche centrato sulla mappa (altrimenti mi porta sul mare)
         mListener.updateDistance(getMapRadius()); //forse non necessario
         if (null != Utils.myLocation) {
-            setZoomLevel(MAX_ZOOM_SEEK); //serve non toccare per sicurezza e forse per evitare solo "~ km" in tvDistance
+            setZoomLevel(MAX_ZOOM_SEEK); //serve non toccare per sicurezza e per evitare solo "~ km" in tvDistance
             mListener.updateSeekZoom(MAX_ZOOM_SEEK);
         }
-
         //use setTag on marker to link with a place
-        for (Place p : Utils.mockPlaces) {
+/*        for (Place p : Utils.mockPlaces) {
             Log.d("MapFragment: ", "adding markers.. " + p.getLatitude() + ", " + p.getLongitude());
             map.addMarker(new MarkerOptions()
                     .position(new LatLng(p.getLatitude(), p.getLongitude()))
@@ -172,12 +169,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
                     .icon(BitmapDescriptorFactory.fromBitmap(Utils.changeBitmapColor(getResources(), p.getColor())))
             );
         }
+*/
         map.setOnMapClickListener(this);
         map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
                 Log.d("MapFragment: ", "Click on map");
-                mListener.showMap();
+                if (!Utils.BIG_MAP)
+                    mListener.showMap();
+                else marker.showInfoWindow();
                 return true;
             }
         });

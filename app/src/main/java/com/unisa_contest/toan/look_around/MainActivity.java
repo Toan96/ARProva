@@ -1,4 +1,4 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around;
 
 import android.Manifest;
 import android.annotation.TargetApi;
@@ -29,9 +29,10 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.example.antonio.arprova.my_location.MyGPSLocation;
+import com.unisa_contest.toan.look_around.my_location.MyGPSLocation;
+import com.unisa_contest.toan.look_around.places.PlaceDrawerASync;
 
-import static com.example.antonio.arprova.CameraPreview.getCameraInstance;
+import static com.unisa_contest.toan.look_around.CameraPreview.getCameraInstance;
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -67,6 +68,9 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         //set no title and no notifyBar before set layout
         setContentView(R.layout.activity_main);
+
+        //need resources in utils class for bitmap
+        Utils.res = getResources();
 
         preview = findViewById(R.id.camera_preview);
         overlay = findViewById(R.id.overlay);
@@ -158,8 +162,6 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             Log.d(TAG, "API 22 or less: not need to check runtime permissions for location");
             locationGranted = true;
         }
-        //check num of active threads
-        Log.d(TAG, "numThreads: " + Thread.activeCount());
     }
 
     @Override
@@ -190,6 +192,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             preview.removeView(mPreview);
         }
         async.cancel(true);
+        myGPSLocation.stopSearchForPlaces();
     }
 
     @Override
@@ -239,6 +242,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                             Utils.dpToPixels(this, Utils.BIG_MAP_DIMEN_LAND))); //no match_parent
                 }
                 tvBearing.setVisibility(View.INVISIBLE);
+                Utils.BIG_MAP = true;
                 //fermo async AR
                 async.cancel(true);
             } else {
@@ -246,6 +250,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 mapContainer.setLayoutParams(new LinearLayout.LayoutParams(Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN),
                         Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN)));
                 tvBearing.setVisibility(View.VISIBLE);
+                Utils.BIG_MAP = false;
                 //riparte async AR
                 async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
             }
@@ -275,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
         mapFragment = MapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss(); //needs.
+        getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();//non cambiare.
     }
 
     //search for location, if not lastKnown try to get location from map after some time
@@ -294,6 +299,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         Location lastKnown = myGPSLocation.getBestLastKnownLocation();
         if (null != lastKnown) {
             myGPSLocation.startIntentService(lastKnown);
+            myGPSLocation.startSearchForPlaces(lastKnown);
             Log.d("gps: ", "used lastKnownLocation");
             tvGpsValues.setText(Utils.formattedValues(lastKnown));
             Utils.myLocation = lastKnown;
@@ -322,6 +328,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                         updateGpsTv(Utils.formattedValues(l));
                         Log.d("gps: ", "used location from map.getMyLocation");
                         myGPSLocation.startIntentService(l);
+                        myGPSLocation.startSearchForPlaces(l);
                         Utils.myLocation = l;
                         mapFragment.setCamera(l); //sembra non serva setZoomLevel
                         updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);

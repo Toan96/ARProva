@@ -94,7 +94,7 @@
             android:layout_marginTop="10dp"
             android:orientation="vertical">
 
-            <com.example.antonio.arprova.VerticalSeekBar
+            <com.unisa_contest.toan.look_around.VerticalSeekBar
                 android:id="@+id/seekBarZoom"
                 android:layout_width="30dp"
                 android:layout_height="220dp"

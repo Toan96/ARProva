@@ -1,4 +1,4 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around.places;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -37,13 +37,23 @@ public class PlaceTag extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+//150 potrebbe essere relativa a dimensione schermo o a distanza place magari
+//15  margine sinistro tra testo e linea
+//20 (primo) margine top  = a dimensione testo per allineare sopra a fine linea
+//20 (secondo) margine top per seconda linea di testo (indirizzo)
+//20 (terzo) margine top per terza linea di testo (distanza)
         canvas.drawLine(x, y, x, y - 150, line);
-        canvas.drawText(place.getNome(), x + 15, y - 150 + 20, text);
+        if (place.getNome().length() > 25) {
+            canvas.drawText(place.getNome().substring(0, 24).concat("..."), x + 15, y - 150 + 20, text);
+        } else {
+            canvas.drawText(place.getNome(), x + 15, y - 150 + 20, text);
+        }
         text.setTextSize(18);
-        canvas.drawText(distanceTo, x + 15, y - 150 + 20 + 20, text);
+        if (place.getIndirizzo().length() > 25) {
+            canvas.drawText(place.getIndirizzo().substring(0, 24).concat("..."), x + 15, y - 150 + 20 + 20, text);
+        } else {
+            canvas.drawText(place.getIndirizzo(), x + 15, y - 150 + 20 + 20, text);
+        }
+        canvas.drawText(distanceTo, x + 15, y - 150 + 20 + 20 + 20, text);
     }
 }
-//150 lunghezza linea dovrebbe essere relativa a dimensione schermo o a distanza magari
-//15 margine sinistro tra testo e linea
-//20 (primo) margine top  = a dimensione testo per allineare sopra a fine linea
-//20 (secondo) margine top per seconda linea di testo (per ora distanza)

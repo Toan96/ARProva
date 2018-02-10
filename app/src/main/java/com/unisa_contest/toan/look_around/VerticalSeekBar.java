@@ -1,4 +1,4 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -106,13 +106,4 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
             onChangeListener.onProgressChanged(this, progress, true);
         }
     }
-/*
-    public synchronized int getMaximum() {
-        return getMax();
-    }
-
-    public synchronized void setMaximum(int maximum) {
-        setMax(maximum);
-    }
-*/
 }

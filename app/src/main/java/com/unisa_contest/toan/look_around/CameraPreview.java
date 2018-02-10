@@ -1,4 +1,4 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -20,7 +20,7 @@ import java.util.List;
  * A basic Camera preview class
  */
 
-@SuppressLint("ViewConstructor")//da verificare, per ora non serve
+@SuppressLint("ViewConstructor") //non servono altri costruttori
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String TAG = "CameraPreview";
@@ -65,7 +65,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
         if (null != c) {
             Log.d(TAG, "getCameraInstance: camera NOT null, setting parameters..");
-            //forse inutile
+            //forse evitabile
             // get Camera parameters
             Camera.Parameters params = c.getParameters();
             List<String> focusModes = params.getSupportedFocusModes();
@@ -76,10 +76,9 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 // set Camera parameters
                 c.setParameters(params);
             }
-            //fine forse inutile
+            //forse evitabile
 
             //for correct viewing angle
-
             if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
                 float verticalViewAngle = params.getVerticalViewAngle();
                 Log.d(TAG, "verticalViewAngle: " + verticalViewAngle);

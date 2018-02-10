@@ -1,4 +1,4 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around.places;
 
 import android.graphics.Color;
 import android.location.Location;
@@ -10,15 +10,16 @@ import java.util.Random;
  * Created by Antonio on 01/02/2018.
  * .
  */
-//todo indirizzo a place, prendendo dati da maps posso prenderlo direttamente credo
+
 public class Place implements Serializable {
 
-    private String nome;
+    private String nome, indirizzo;
     private Location locationData;
     private int color;
 
-    Place(String nome, double lat, double lng) {
+    Place(String nome, double lat, double lng, String indirizzo) {
         this.nome = nome;
+        this.indirizzo = indirizzo;
         this.locationData = new Location("mockProvider");
         locationData.setLatitude(lat);
         locationData.setLongitude(lng);
@@ -33,34 +34,31 @@ public class Place implements Serializable {
         return nome;
     }
 
-    /*
-        public void setNome(String nome) {
-            this.nome = nome;
-        }
-    */
+    String getIndirizzo() {
+        return indirizzo;
+    }
+
     Location getLocationData() {
         return locationData;
     }
 
-    /*
-        public void setLocationData(Location locationData) {
-            this.locationData = locationData;
-        }
-    */
-    public int getColor() {
-        return color;
-    }
-
-    /*
-        public void setColor(int color) {
-            this.color = color;
-        }
-    */
     double getLatitude() {
         return this.locationData.getLatitude();
     }
 
     double getLongitude() {
         return this.locationData.getLongitude();
+    }
+
+    public int getColor() {
+        return color;
+    }
+
+    @Override
+    public String toString() {
+        return "Place{" +
+                "nome='" + nome + '\'' +
+                ", indirizzo='" + indirizzo + '\'' +
+                '}';
     }
 }

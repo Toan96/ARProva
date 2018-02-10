@@ -1,4 +1,4 @@
-package com.example.antonio.arprova.my_location;
+package com.unisa_contest.toan.look_around.my_location;
 
 import android.app.IntentService;
 import android.content.Intent;
@@ -10,7 +10,7 @@ import android.os.ResultReceiver;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.example.antonio.arprova.R;
+import com.unisa_contest.toan.look_around.R;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class FetchAddressIntentService extends IntentService {
     static final int FAILURE_RESULT = 1;
 
     private static final String PACKAGE_NAME =
-            "com.example.antonio.arprova.my_location";
+            "com.unisa_contest.toan.look_around.my_location";
 
     static final String RECEIVER = PACKAGE_NAME + ".MyGPSLocation";
 

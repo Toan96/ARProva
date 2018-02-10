@@ -1,6 +1,7 @@
-package com.example.antonio.arprova.my_location;
+package com.unisa_contest.toan.look_around.my_location;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -16,11 +17,12 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.example.antonio.arprova.MainActivity;
-import com.example.antonio.arprova.MapFragment;
-import com.example.antonio.arprova.R;
-import com.example.antonio.arprova.UpdateUICallback;
-import com.example.antonio.arprova.Utils;
+import com.unisa_contest.toan.look_around.MainActivity;
+import com.unisa_contest.toan.look_around.MapFragment;
+import com.unisa_contest.toan.look_around.R;
+import com.unisa_contest.toan.look_around.UpdateUICallback;
+import com.unisa_contest.toan.look_around.Utils;
+import com.unisa_contest.toan.look_around.places.PlacesASync;
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -41,6 +43,7 @@ public class MyGPSLocation {
     private Handler handler = null;
     private UpdateUICallback updateUICallback = null;
     private AlertDialog.Builder dialog = null;
+    private PlacesASync placesASync = null;
 
     //listener per gps updates
     private LocationListener locationListener = new LocationListener() {
@@ -52,9 +55,10 @@ public class MyGPSLocation {
             //serve altrimenti o aggiorna sempre zoom al massimo o non lo fa mai
             if (first) {
                 updateUICallback.updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
+                startSearchForPlaces(location);
                 first = false;
             }
-            mapFragment.setCamera(location);//setZoomLevel sembra non serva
+            mapFragment.setCamera(location);//setZoomLevel sembra non servire
             Utils.myLocation = location;
         }
 
@@ -99,7 +103,7 @@ public class MyGPSLocation {
         criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
         String provider = locationManager.getBestProvider(criteria, true);
         if (provider != null) {
-            //forse qui veniva chiamato troppe volte inutilmente(impossibile vedere). removeUpdates per evitare (spero).
+            //qui venivano sovrapposte le chiamate inutilmente, removeUpdates per evitare.
             locationManager.removeUpdates(locationListener);
             locationManager.requestLocationUpdates(provider, MIN_TIME, MIN_DISTANCE, locationListener);
             Log.d("Best location provider", provider);
@@ -173,6 +177,17 @@ public class MyGPSLocation {
             return lastKnown;
         }
         return null;
+    }
+
+    //method to get places
+    public void startSearchForPlaces(Location location) {
+        PlacesASync placesASync = new PlacesASync();
+        placesASync.execute(Utils.sbMethod((Activity) context, location));
+    }
+
+    public void stopSearchForPlaces() {
+        if (null != placesASync)
+            placesASync.cancel(true); //gestire in asyncTasks in caso non si interrompessero
     }
 
     //methods to take address

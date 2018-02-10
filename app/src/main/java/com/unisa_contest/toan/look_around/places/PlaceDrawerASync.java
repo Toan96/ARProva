@@ -1,10 +1,12 @@
-package com.example.antonio.arprova;
+package com.unisa_contest.toan.look_around.places;
 
 import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+
+import com.unisa_contest.toan.look_around.Utils;
 
 import java.util.ArrayList;
 
@@ -28,7 +30,7 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
     protected Object doInBackground(Object[] objects) {
         Log.d("ASync: ", "doInBackground");
         while (Utils.myLocation == null) {
-            if (isCancelled()) return null;
+            if (isCancelled()) return null; //exit when onPause called
             Log.d("ASync: ", "waiting for location...");
             sleep(3000);
         }
@@ -43,8 +45,8 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
         boolean isLastZero = false; //to avoid polling and continuous logging
 
         while (true) {
-            if (isCancelled()) return null;
-            for (Place p : Utils.mockPlaces) {
+            if (isCancelled()) return null; //exit when onPause called
+            for (Place p : Utils.places) {
                 distanceTo = Utils.myLocation.distanceTo(p.getLocationData());
                 //se la distanza di place > di raggio della mappa allora non mostrare, vai avanti
                 if (distanceTo > Utils.visibleDistance || distanceTo < 0)
@@ -72,12 +74,11 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
 
     @Override
     protected void onProgressUpdate(Object... values) {
+        ((ViewGroup) values[0]).removeAllViews();
         if (values[1].equals("zero")) {
             Log.d("ASync update: ", "No places to draw");
-            ((ViewGroup) values[0]).removeAllViews();
         } else {
             Log.d("ASync update: ", "places to draw: " + ((ArrayList) values[1]).size());
-            ((ViewGroup) values[0]).removeAllViews();
             for (PlaceTag pt : ((ArrayList<PlaceTag>) values[1]))
                 ((ViewGroup) values[0]).addView(pt);            //concurrentModificationException solved but used clone
         }
@@ -90,10 +91,10 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
 
     private int calculateY(float distanceTo) {
         if (distanceTo < 250)
-            return height / 3;
+            return height - (height / 3);
         else if (distanceTo < 800)
             return height / 2;
-        else return height - (height / 3);
+        else return height / 3;
     }
 
     private int calculateX(float bearingTo) {
