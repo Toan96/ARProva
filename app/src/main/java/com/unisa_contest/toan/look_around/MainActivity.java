@@ -2,6 +2,8 @@ package com.unisa_contest.toan.look_around;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.hardware.Camera;
@@ -10,6 +12,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,9 +32,12 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.unisa_contest.toan.look_around.my_location.MyGPSLocation;
 import com.unisa_contest.toan.look_around.places.PlaceDrawerASync;
+
+import java.util.ArrayList;
 
 import static com.unisa_contest.toan.look_around.CameraPreview.getCameraInstance;
 
@@ -55,9 +62,6 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private SensorManager sensorManager;
     private SensorEventListener sensorEventListener;
     private boolean cameraGranted = false, locationGranted = false;
-    private float compass_last_measured_bearing = 0;
-    private float[] mAccel = null, mMagnetic = null;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +75,12 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
 
         //need resources in utils class for bitmap
         Utils.res = getResources();
+
+        if (null != savedInstanceState) {
+            if (null != savedInstanceState.getParcelableArrayList("Places"))
+                Utils.places = savedInstanceState.getParcelableArrayList("Places");
+            Utils.FIND_FRIEND_MODE = savedInstanceState.getBoolean("FriendMode", false);
+        }
 
         preview = findViewById(R.id.camera_preview);
         overlay = findViewById(R.id.overlay);
@@ -171,6 +181,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         showLayout();
         showLocation();
         initSensors();
+        checkInternetConnection();
         //start AsyncTask for drawing AR places
         async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
     }
@@ -211,6 +222,15 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         super.onDestroy();
         if (null != myGPSLocation)
             myGPSLocation.removeHandler();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if ((null != Utils.places) && (Utils.places.size() > 0))
+            outState.putParcelableArrayList("Places", Utils.places);
+        if (Utils.FIND_FRIEND_MODE)
+            outState.putBoolean("FriendMode", Utils.FIND_FRIEND_MODE);
     }
 
     @Override
@@ -280,6 +300,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
         mapFragment = MapFragment.newInstance();
+        if (Utils.FIND_FRIEND_MODE)
+            findViewById(R.id.returnToDefault).setVisibility(View.VISIBLE);
         getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();//non cambiare.
     }
 
@@ -299,7 +321,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         Location lastKnown = myGPSLocation.getBestLastKnownLocation();
         if (null != lastKnown) {
             myGPSLocation.startIntentService(lastKnown);
-            myGPSLocation.startSearchForPlaces(lastKnown);
+            if ((null != Utils.places) && (0 == Utils.places.size()))
+                myGPSLocation.startSearchForPlaces(lastKnown);
             Log.d("gps: ", "used lastKnownLocation");
             tvGpsValues.setText(Utils.formattedValues(lastKnown));
             Utils.myLocation = lastKnown;
@@ -328,12 +351,15 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                         updateGpsTv(Utils.formattedValues(l));
                         Log.d("gps: ", "used location from map.getMyLocation");
                         myGPSLocation.startIntentService(l);
-                        myGPSLocation.startSearchForPlaces(l);
+                        if ((null != Utils.places) && (0 == Utils.places.size()))
+                            myGPSLocation.startSearchForPlaces(l);
                         Utils.myLocation = l;
                         mapFragment.setCamera(l); //sembra non serva setZoomLevel
                         updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
                         //updateDistance(mapFragment.getMapRadius());
                         MyGPSLocation.first = false;
+                    } else {
+                        handler.postDelayed(runnable, 3000);
                     }
                 }
             };
@@ -342,119 +368,107 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     }
 
     private void initSensors() {
-        if (sensorManager != null) {
-            Sensor mSensorAccel = null, mSensorMagneticField = null;
-//            mSensorAccel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//            mSensorMagneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-            if ((mSensorAccel != null) && (mSensorMagneticField != null)) {
-            /* Initialize the accelerometer sensor */
-                if (mSensorAccel != null) {
-                    Log.i(TAG, "Accel sensor available. (TYPE_ACCELEROMETER)");
-                    sensorManager.registerListener(sensorEventListener,
-                            mSensorAccel, SensorManager.SENSOR_DELAY_UI); //almeno game, ui ha troppo delay
-                } else {
-                    Log.i(TAG, "Accel sensor unavailable. (TYPE_ACCELEROMETER)");
-                }
-            /* Initialize the magnetic field sensor */
-                if (mSensorMagneticField != null) {
-                    Log.i(TAG, "Magnetic field sensor available. (TYPE_MAGNETIC_FIELD)");
-                    sensorManager.registerListener(sensorEventListener,
-                            mSensorMagneticField, SensorManager.SENSOR_DELAY_UI); //almeno game, ui ha troppo delay
-                } else {
-                    Log.i(TAG, "Magnetic field sensor unavailable. (TYPE_MAGNETIC_FIELD)");
-                }
-            } else {
-                Log.i(TAG, "Deprecated use: (TYPE_ORIENTATION)");
+        if (null != sensorManager) {
+            Sensor rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR); //include gyro
+            if (null != rotationVectorSensor) {
+                Log.i(TAG, "rotationVector sensor available. (TYPE_ROTATION_VECTOR)");
                 sensorManager.registerListener(sensorEventListener,
-                        sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
-                        SensorManager.SENSOR_DELAY_GAME); //almeno game, ui ha troppo delay
+                        rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                return;
+            } else {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                    Sensor geoRotVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR); //without gyro
+                    if (null != geoRotVectorSensor) {
+                        Log.i(TAG, "geoRotVector sensor available. (TYPE_GEOMAGNETIC_ROTATION_VECTOR)");
+                        sensorManager.registerListener(sensorEventListener,
+                                geoRotVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                        return;
+                    }
+                }
             }
+            Log.i(TAG, "Deprecated use: (TYPE_ORIENTATION)");
+            sensorManager.registerListener(sensorEventListener,
+                    sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+                    SensorManager.SENSOR_DELAY_GAME);
+        }
+    }
+
+    private void checkInternetConnection() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        //noinspection ConstantConditions
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+        if (!isConnected) {
+            Toast.makeText(getApplicationContext(), R.string.checkInternet, Toast.LENGTH_SHORT).show();
+            handler = new Handler();
+            runnable = new Runnable() {
+                @Override
+                public void run() {
+                    checkInternetConnection();
+                }
+            };
+            handler.postDelayed(runnable, 12000);
         }
     }
 
     private void updateBearing(SensorEvent event) {
-/*
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            mAccel = event.values.clone();
-            Log.i(TAG, "Accel sensor event taken, values: " + mAccel[0] + ", " + mAccel[1] + ", " + mAccel[2]);
-        }
-        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            mMagnetic = event.values.clone();
-            Log.i(TAG, "magnet sensor event taken, values: " + mMagnetic[0] + ", " + mMagnetic[1] + ", " + mMagnetic[2]);
-        }
-*/
-        if ((mAccel != null) && (mMagnetic != null)) {
-            float[] rotationMatrix = new float[9];
-            float[] inclinationMatrix = new float[9]; //remap inclination and de-comment
-            if (!SensorManager.getRotationMatrix(rotationMatrix, inclinationMatrix,
-                    mAccel, mMagnetic)) {
-                Log.d("Getting rot matrix: ", "DONE");
-                /* Compensate device orientation */
-                float[] remappedRotationMatrix = new float[9];
-                switch (getWindowManager().getDefaultDisplay()
-                        .getRotation()) {
-                    case Surface.ROTATION_0:
-                        SensorManager.remapCoordinateSystem(rotationMatrix,
-                                SensorManager.AXIS_X, SensorManager.AXIS_Y,
-                                remappedRotationMatrix);
-                        break;
-                    case Surface.ROTATION_90:
-                        //noinspection SuspiciousNameCombination
-                        SensorManager.remapCoordinateSystem(rotationMatrix,
-                                SensorManager.AXIS_Y,
-                                SensorManager.AXIS_MINUS_X,
-                                remappedRotationMatrix);
-                        break;
-                    case Surface.ROTATION_180:
-                        SensorManager.remapCoordinateSystem(rotationMatrix,
-                                SensorManager.AXIS_MINUS_X,
-                                SensorManager.AXIS_MINUS_Y,
-                                remappedRotationMatrix);
-                        break;
-                    case Surface.ROTATION_270:
-                        //noinspection SuspiciousNameCombination
-                        SensorManager.remapCoordinateSystem(rotationMatrix,
-                                SensorManager.AXIS_MINUS_Y,
-                                SensorManager.AXIS_X, remappedRotationMatrix);
-                        break;
-                }
-
-                /* Calculate Orientation */
-                float orientation[] = new float[3];
-                SensorManager.getOrientation(remappedRotationMatrix,
-                        orientation);
-                //float inclination = SensorManager.getInclination(inclinationMatrix);
-                Log.d("orientation values: ", orientation[0] + ", " + orientation[1] + ", " + orientation[2]);
-                /* Get measured value */
-                float current_measured_bearing = (float) (orientation[0] * 180 / Math.PI);
-                if (current_measured_bearing < 0) {
-                    current_measured_bearing += 360;
-                }
-
-                Log.d("current_meas_bearing: ", "is: " + current_measured_bearing);
-
-                /* Smooth values using a 'Low Pass Filter' */
-                current_measured_bearing = current_measured_bearing
-                        + Utils.SMOOTHING_FACTOR_COMPASS
-                        * (current_measured_bearing - compass_last_measured_bearing);
-
-                /*
-                 * Update variables for next use (Required for Low Pass
-                 * Filter)
-                 */
-                compass_last_measured_bearing = current_measured_bearing;
-
-                /* Update normal output */
-                tvBearing.setText(Utils.formatBearing(current_measured_bearing));
-
-                /*
-                Update map camera rotation.
-                */
-                mapFragment.updateCameraBearing(current_measured_bearing);
-                Utils.currentBearing = current_measured_bearing;
-            } else {
-                Log.e("Rotation matrix", "error creating rotation matrix");
+        //todo delay_normal forse troppo, diminuire e provare con low pass filter
+        //todo aggiungere condizione flat screen?
+        //todo check offset sensore tra +-20 a +- 50
+        //todo true nord
+        if (Sensor.TYPE_ROTATION_VECTOR == event.sensor.getType() ||
+                Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR == event.sensor.getType()) {
+            float[] rotationMatrix = new float[16];
+            SensorManager.getRotationMatrixFromVector(
+                    rotationMatrix, event.values);
+            Log.d("Getting rot matrix: ", "DONE");
+            float[] remappedRotationMatrix = new float[16];
+            //need to remap (x, z)
+            SensorManager.remapCoordinateSystem(rotationMatrix,
+                    SensorManager.AXIS_X, SensorManager.AXIS_Z,
+                    remappedRotationMatrix);
+            // Calculate Orientation
+            float orientation[] = new float[3];
+            SensorManager.getOrientation(remappedRotationMatrix,
+                    orientation);
+            //need to convert in degrees (getOrientation returns radians)
+            for (int i = 0; i < 3; i++) {
+                orientation[i] = (float) (Math.toDegrees(orientation[i]));
             }
+            //for look through, add the rotation state
+            // look through has different angles depending on rotation state
+            switch (getWindowManager().getDefaultDisplay()
+                    .getRotation()) {
+                case Surface.ROTATION_0:
+                    break;
+                case Surface.ROTATION_90: {
+                    orientation[2] += 90;
+                    break;
+                }
+                case Surface.ROTATION_180: {
+                    orientation[2] += 180;
+                    break;
+                }
+                case Surface.ROTATION_270: {
+                    orientation[2] += 270;
+                    break;
+                }
+            }
+            Log.d("rotVector:", "orientation values: " + orientation[0] + ", " + orientation[1] + ", " + orientation[2]);
+
+            Utils.usedSensor = "rotationVector";
+            //qui uso yaw or azimuth
+            Utils.currentBearing = Utils.normalizeBearing(orientation[0]);
+            //qui uso pitch
+            Utils.currentInclination = orientation[1];
+            //qui uso roll
+            Utils.currentRoll = orientation[2];
+            //aggiorno view
+            tvBearing.setText(Utils.formatBearing(orientation[0]));
+            mapFragment.updateCameraBearing(orientation[0]);
+
         } else {
             //for old devices
             float bearing = 0;
@@ -479,6 +493,18 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             mapFragment.updateCameraBearing(bearing);
             Utils.currentBearing = bearing;
         }
+    }
+
+    //used to restart activity and return to classic use
+    public void returnToDefault(View view) {
+        Intent i = getBaseContext().getPackageManager()
+                .getLaunchIntentForPackage(getBaseContext().getPackageName());
+        //noinspection ConstantConditions  //forse non tutti necessari
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        Utils.FIND_FRIEND_MODE = false;
+        Utils.places = new ArrayList<>();
+        finish();
+        startActivity(i);
     }
 
     /**

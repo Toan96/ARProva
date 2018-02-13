@@ -8,6 +8,16 @@
     android:baselineAligned="false"
     tools:context=".MainActivity">
 
+    <Button
+        android:id="@+id/returnToDefault"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:gravity="start"
+        android:onClick="returnToDefault"
+        android:text="@string/returnToDefault"
+        android:visibility="gone" />
+
     <FrameLayout
         android:id="@+id/overlay"
         android:layout_width="match_parent"

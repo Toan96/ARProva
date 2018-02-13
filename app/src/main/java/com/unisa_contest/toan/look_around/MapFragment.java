@@ -18,10 +18,13 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
+import com.unisa_contest.toan.look_around.places.Place;
 
 /**
  * Created by Antonio on 19/01/2018.
@@ -161,15 +164,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             mListener.updateSeekZoom(MAX_ZOOM_SEEK);
         }
         //use setTag on marker to link with a place
-/*        for (Place p : Utils.mockPlaces) {
-            Log.d("MapFragment: ", "adding markers.. " + p.getLatitude() + ", " + p.getLongitude());
-            map.addMarker(new MarkerOptions()
-                    .position(new LatLng(p.getLatitude(), p.getLongitude()))
-                    .title(p.getNome())
-                    .icon(BitmapDescriptorFactory.fromBitmap(Utils.changeBitmapColor(getResources(), p.getColor())))
-            );
-        }
-*/
+        if (Utils.places.size() > 0)
+            for (Place p : Utils.places) {
+                Log.d("MapFragment: ", "adding markers.. " + p.getLatitude() + ", " + p.getLongitude());
+                map.addMarker(new MarkerOptions()
+                        .position(new LatLng(p.getLatitude(), p.getLongitude()))
+                        .title(p.getNome())
+                        .icon(BitmapDescriptorFactory.fromBitmap(Utils.changeBitmapColor(p.getColor())))
+                );
+            }
+
         map.setOnMapClickListener(this);
         map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override

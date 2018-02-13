@@ -2,8 +2,9 @@ package com.unisa_contest.toan.look_around.places;
 
 import android.graphics.Color;
 import android.location.Location;
+import android.os.Parcel;
+import android.os.Parcelable;
 
-import java.io.Serializable;
 import java.util.Random;
 
 /**
@@ -11,13 +12,24 @@ import java.util.Random;
  * .
  */
 
-public class Place implements Serializable {
+public class Place implements Parcelable {
 
+    public static final Creator<Place> CREATOR = new Creator<Place>() {
+        @Override
+        public Place createFromParcel(Parcel in) {
+            return new Place(in);
+        }
+
+        @Override
+        public Place[] newArray(int size) {
+            return new Place[size];
+        }
+    };
     private String nome, indirizzo;
     private Location locationData;
     private int color;
 
-    Place(String nome, double lat, double lng, String indirizzo) {
+    public Place(String nome, double lat, double lng, String indirizzo) {
         this.nome = nome;
         this.indirizzo = indirizzo;
         this.locationData = new Location("mockProvider");
@@ -30,7 +42,14 @@ public class Place implements Serializable {
         this.color = Color.rgb(r, g, b);
     }
 
-    String getNome() {
+    private Place(Parcel in) {
+        nome = in.readString();
+        indirizzo = in.readString();
+        locationData = in.readParcelable(Location.class.getClassLoader());
+        color = in.readInt();
+    }
+
+    public String getNome() {
         return nome;
     }
 
@@ -42,11 +61,11 @@ public class Place implements Serializable {
         return locationData;
     }
 
-    double getLatitude() {
+    public double getLatitude() {
         return this.locationData.getLatitude();
     }
 
-    double getLongitude() {
+    public double getLongitude() {
         return this.locationData.getLongitude();
     }
 
@@ -60,5 +79,18 @@ public class Place implements Serializable {
                 "nome='" + nome + '\'' +
                 ", indirizzo='" + indirizzo + '\'' +
                 '}';
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(nome);
+        dest.writeString(indirizzo);
+        dest.writeParcelable(locationData, flags);
+        dest.writeInt(color);
     }
 }

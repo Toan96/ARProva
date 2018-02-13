@@ -24,8 +24,11 @@
     <!-- per camera -->
     <uses-feature
         android:name="android.hardware.camera"
-        android:required="true" /> <!-- forse evitabile, ma può essere anche piu specifico nelle feature.
-        verificare uses-feature e required vari-->
+        android:required="true" />
+    <!--
+      forse evitabile, ma può essere anche piu specifico nelle feature.
+        verificare uses-feature e required vari
+    -->
 
     <!-- per gps -->
     <uses-feature
@@ -53,17 +56,33 @@
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="AIzaSyBw5iFIkjUMPgUTyB5SPoRNdhoVnlIzj_Y" />
 
-        <activity android:name="com.unisa_contest.toan.look_around.MainActivity">
+        <activity android:name=".MainActivity" />
 
+        <activity
+            android:name=".SplashActivity"
+            android:theme="@style/SplashTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- to open shared locations -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="maps.google.com"
+                    android:scheme="https" />
+                <!-- maybe geo data -->
             </intent-filter>
         </activity>
 
         <service
-            android:name="com.unisa_contest.toan.look_around.my_location.FetchAddressIntentService"
+            android:name=".my_location.FetchAddressIntentService"
             android:exported="false" />
+
     </application>
+
 </manifest>

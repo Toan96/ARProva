@@ -31,8 +31,6 @@ public class Utils {
     //used for permissions
     static final int MY_PERMISSIONS_REQUEST_ACCESS_CAMERA = 123;
     static final int MY_PERMISSIONS_REQUEST_ACCESS_LOC = 321;
-    //used for sensors
-    static final float SMOOTHING_FACTOR_COMPASS = 0.8f; //needs between 0, 1.
     //used for map fragment
     static final int SMALL_MAP_DIMEN = 100;
     static final int BIG_MAP_DIMEN_PORTRAIT = 500;
@@ -42,8 +40,12 @@ public class Utils {
     //used for AR
     public static Location myLocation = null;
     public static float BEARING_OFFSET = 28f; //28 degrees is default before getViewAngle
+    public static float INCLINATION_OFFSET = 35f; //35 degrees is default before getViewAngle
     public static float visibleDistance;
     public static float currentBearing;
+    public static float currentInclination;
+    public static float currentRoll;
+    public static String usedSensor;
     //mockPlaces
     public static ArrayList<Place> places = new ArrayList<>(); /*new ArrayList<Place>(); {{
         add(new Place("Mensa Universitaria", 40.7729432, 14.7938988, "mockAddress"));
@@ -53,6 +55,8 @@ public class Utils {
         add(new Place("Pizzeria Sant'Antonio", 40.3405952, 15.3346918, "mockAddress"));
     }};
 */
+    //used for shared locations
+    static boolean FIND_FRIEND_MODE = false;
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
     static boolean BIG_MAP = false;
@@ -121,6 +125,15 @@ public class Utils {
 
         //Log.i("Utils: format bearing", "rotation sensor azimuth " + baseAzimuth + ": " + bearingText);
         return (int) baseAzimuth + "° " + bearingText;
+    }
+
+    public static float normalizeBearing(float bearingTo) {
+        if (bearingTo > 360)
+            bearingTo %= 360;
+        if (bearingTo < 0)
+            //non cambiare, dovrebbe funzionare perche bearingTo è negativo
+            bearingTo = 360 + bearingTo;
+        return bearingTo;
     }
 
     public static String formatDistance(float baseDistance) {

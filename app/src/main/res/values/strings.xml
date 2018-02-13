@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LookARound</string>
     <string name="toast_cameraError">An error occurred with the camera</string>
@@ -18,4 +19,7 @@
     <string name="errorePermessiCamera">Error, camera permission required</string>
     <string name="errorePermessiGPS">Error,\nlocation permissions\nrequired</string>
     <string name="default_distance">~ km</string>
+    <string name="checkInternet">Check internet connection</string>
+    <string name="customPlace">Received position</string>
+    <string name="returnToDefault">Friend Mode\nSwitch to default</string>
 </resources>

@@ -83,10 +83,12 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                 float verticalViewAngle = params.getVerticalViewAngle();
                 Log.d(TAG, "verticalViewAngle: " + verticalViewAngle);
                 Utils.BEARING_OFFSET = verticalViewAngle / 2;
+                Utils.INCLINATION_OFFSET = params.getHorizontalViewAngle() / 2;
             } else if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
                 float horizontalViewAngle = params.getHorizontalViewAngle();
                 Log.d(TAG, "horizontalViewAngle: " + horizontalViewAngle);
                 Utils.BEARING_OFFSET = horizontalViewAngle / 2;
+                Utils.INCLINATION_OFFSET = params.getVerticalViewAngle() / 2;
             }
         }
         return c; // returns null if camera is unavailable

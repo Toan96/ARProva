@@ -35,7 +35,7 @@ public class PlacesASync extends AsyncTask<String, Integer, String> {
         ParserASync parserASync = new ParserASync();
         // Start parsing the Google places in JSON format
         // Invokes the "doInBackground()" method of the class Parser.
-        parserASync.execute(result);
+        parserASync.execute(result); //todo parser non eseguito direttamente
     }
 
     private String downloadUrl(String strUrl) throws IOException {

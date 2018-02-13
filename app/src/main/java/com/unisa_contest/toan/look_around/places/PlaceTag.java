@@ -18,6 +18,7 @@ public class PlaceTag extends View {
     private String distanceTo;
     private float x, y;
     private Paint line, text;
+    //text size nome (25) e info (17), strokeWidth(5)
 
     public PlaceTag(Context context, Place p, int x, int y, String distanceTo) {
         super(context);
@@ -28,32 +29,46 @@ public class PlaceTag extends View {
         line = new Paint();
         line.setColor(p.getColor());
         line.setStyle(Paint.Style.STROKE);
-        line.setStrokeWidth(5);
+        line.setStrokeWidth(5);//update commento su
         text = new Paint();
         text.setColor(p.getColor());
         text.setStyle(Paint.Style.FILL);
-        text.setTextSize(25);
+        text.setTextSize(25);//update commento su
     }
 
+    //todo shadow black like text views
+//todo evitare meglio sovrapposizione tag
     @Override
     protected void onDraw(Canvas canvas) {
-//150 potrebbe essere relativa a dimensione schermo o a distanza place magari
-//15  margine sinistro tra testo e linea
-//20 (primo) margine top  = a dimensione testo per allineare sopra a fine linea
-//20 (secondo) margine top per seconda linea di testo (indirizzo)
-//20 (terzo) margine top per terza linea di testo (distanza)
-        canvas.drawLine(x, y, x, y - 150, line);
+        final int LINE_LENGTH = 150; //LINE_LENGTH potrebbe essere relativa a dimensione schermo o a distanza place magari
+        final int LEFT_MARGIN = 15; //LEFT_MARGIN  margine sinistro tra testo e linea
+        final int TOP_MARGIN = 20; //TOP_MARGIN (primo) margine top  = a dimensione testo per allineare sopra a fine linea
+        //TOP_MARGIN (secondo) margine top per seconda linea di testo (indirizzo)
+        //TOP_MARGIN (terzo) margine top per terza linea di testo (distanza)
+
+/*todo rotate si basa comunque su dimensioni schermo normali(scompare a meta schermo mentre è ruotato)
+        if ((null != Utils.usedSensor) && (Utils.usedSensor.equals("rotationVector")))
+            canvas.rotate(-Utils.currentRoll);
+*/
+        //to avoid tag overlapping
+        if (place.getColor() % 2 == 0) {
+            canvas.translate((float) (place.getColor() * 0.00001), (float) (place.getColor() * 0.00003));
+        } else {
+            canvas.translate((float) -(place.getColor() * 0.00001), (float) -(place.getColor() * 0.00003));
+        }
+        //draw
+        canvas.drawLine(x, y, x, y - LINE_LENGTH, line);
         if (place.getNome().length() > 25) {
-            canvas.drawText(place.getNome().substring(0, 24).concat("..."), x + 15, y - 150 + 20, text);
+            canvas.drawText(place.getNome().substring(0, 24).concat("..."), x + LEFT_MARGIN, y - LINE_LENGTH + TOP_MARGIN, text);
         } else {
-            canvas.drawText(place.getNome(), x + 15, y - 150 + 20, text);
+            canvas.drawText(place.getNome(), x + LEFT_MARGIN, y - LINE_LENGTH + TOP_MARGIN, text);
         }
-        text.setTextSize(18);
+        text.setTextSize(17);//update commento su
         if (place.getIndirizzo().length() > 25) {
-            canvas.drawText(place.getIndirizzo().substring(0, 24).concat("..."), x + 15, y - 150 + 20 + 20, text);
+            canvas.drawText(place.getIndirizzo().substring(0, 24).concat("..."), x + LEFT_MARGIN, y - LINE_LENGTH + TOP_MARGIN + TOP_MARGIN, text);
         } else {
-            canvas.drawText(place.getIndirizzo(), x + 15, y - 150 + 20 + 20, text);
+            canvas.drawText(place.getIndirizzo(), x + LEFT_MARGIN, y - LINE_LENGTH + TOP_MARGIN + TOP_MARGIN, text);
         }
-        canvas.drawText(distanceTo, x + 15, y - 150 + 20 + 20 + 20, text);
+        canvas.drawText(distanceTo, x + LEFT_MARGIN, y - LINE_LENGTH + TOP_MARGIN + TOP_MARGIN + TOP_MARGIN, text);
     }
 }

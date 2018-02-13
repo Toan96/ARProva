@@ -34,12 +34,20 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
             Log.d("ASync: ", "waiting for location...");
             sleep(3000);
         }
+//todo inutile eliminare probabilmente
+        while (0 == Utils.places.size()) {
+            if (isCancelled()) return null; //exit when onPause called
+            Log.d("ASync: ", "waiting for places...");
+            sleep(3000);
+        }
 
         Context context = (Context) objects[0];
         ViewGroup view = (ViewGroup) objects[1];
         ArrayList<PlaceTag> toDraw = new ArrayList<>();
         //take screen size
+        //noinspection ConstantConditions
         width = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getWidth();
+        //noinspection ConstantConditions
         height = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getHeight();
         float distanceTo, bearingTo, bearTo;
         boolean isLastZero = false; //to avoid polling and continuous logging
@@ -52,7 +60,7 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
                 if (distanceTo > Utils.visibleDistance || distanceTo < 0)
                     continue;
                 bearTo = Utils.myLocation.bearingTo(p.getLocationData());
-                bearingTo = normalizeBearing(bearTo); //altrimenti non effettua il calcolo corretto
+                bearingTo = Utils.normalizeBearing(bearTo); //altrimenti non effettua il calcolo corretto
                 //se orientamento di place troppo distante dal mio allora non mostrare
                 if ((bearingTo > (Utils.currentBearing + Utils.BEARING_OFFSET)) ||
                         (bearingTo < (Utils.currentBearing - Utils.BEARING_OFFSET)))
@@ -79,6 +87,7 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
             Log.d("ASync update: ", "No places to draw");
         } else {
             Log.d("ASync update: ", "places to draw: " + ((ArrayList) values[1]).size());
+            // noinspection unchecked
             for (PlaceTag pt : ((ArrayList<PlaceTag>) values[1]))
                 ((ViewGroup) values[0]).addView(pt);            //concurrentModificationException solved but used clone
         }
@@ -89,12 +98,17 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
         Log.d("ASync: ", "onPostExecute " + result);
     }
 
-    private int calculateY(float distanceTo) {
+    private int calculateY(float distanceTo) { //todo aggiungere altri livelli probabilmente
+        int inclination = 0;
+        if ((null != Utils.usedSensor) && (Utils.usedSensor.equals("rotationVector"))) {
+            inclination = (int) (((height * -Utils.currentInclination) / (Utils.INCLINATION_OFFSET * 2)));
+            //inclination = inclination + (width / 2);
+        }
         if (distanceTo < 250)
-            return height - (height / 3);
+            return height - (height / 5) + inclination;
         else if (distanceTo < 800)
-            return height / 2;
-        else return height / 3;
+            return height - (height / 3) + inclination;
+        else return height / 2 + inclination;
     }
 
     private int calculateX(float bearingTo) {
@@ -115,14 +129,5 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
         currOffset = (((width * currOffset) / (Utils.BEARING_OFFSET * 2))); //todo inversamente proporzionale alla distanza
 //        Log.d("Async back: ", "calc x: " + currOffset);
         return (int) currOffset + (width / 2);
-    }
-
-    private float normalizeBearing(float bearingTo) {
-        if (bearingTo > 360)
-            bearingTo %= 360;
-        if (bearingTo < 0)
-            //non cambiare, dovrebbe funzionare perche bearingTo è negativo
-            bearingTo = 360 + bearingTo;
-        return bearingTo;
     }
 }
