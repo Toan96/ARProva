@@ -1,6 +1,7 @@
 package com.unisa_contest.toan.look_around.places;
 
 import android.os.AsyncTask;
+import android.os.Build;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -32,10 +33,14 @@ public class PlacesASync extends AsyncTask<String, Integer, String> {
     // Executed after the complete execution of doInBackground() method
     @Override
     protected void onPostExecute(String result) {
-        ParserASync parserASync = new ParserASync();
         // Start parsing the Google places in JSON format
         // Invokes the "doInBackground()" method of the class Parser.
-        parserASync.execute(result); //todo parser non eseguito direttamente
+        if (Build.VERSION.SDK_INT >= 11/*HONEYCOMB*/) {
+            new ParserASync().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, result);
+        } else {
+            new ParserASync().execute(result);
+        }
+
     }
 
     private String downloadUrl(String strUrl) throws IOException {

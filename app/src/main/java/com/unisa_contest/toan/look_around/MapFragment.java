@@ -196,6 +196,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         }
     }
 
+    @SuppressWarnings("all")
     public void setCamera(Location location) {
         if (null != map) {
             CameraUpdate cameraUpdate;

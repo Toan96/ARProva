@@ -9,6 +9,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.LightingColorFilter;
 import android.graphics.Paint;
@@ -35,9 +36,12 @@ public class Utils {
     static final int SMALL_MAP_DIMEN = 100;
     static final int BIG_MAP_DIMEN_PORTRAIT = 500;
     static final int BIG_MAP_DIMEN_LAND = 400;
+    //used for AR
+    private static final float ALPHA = 0.25f;//used for LowPass Filter, if ALPHA = 1 OR 0, no filter applies, less is smoother but also slower.
+    //used for json query
+    private static final String PLACES_TO_SEARCH = "point_of_interest"; // "restaurant"
     //used to access map from PlacesASync
     public static GoogleMap map = null;
-    //used for AR
     public static Location myLocation = null;
     public static float BEARING_OFFSET = 28f; //28 degrees is default before getViewAngle
     public static float INCLINATION_OFFSET = 35f; //35 degrees is default before getViewAngle
@@ -56,7 +60,7 @@ public class Utils {
     }};
 */
     //used for shared locations
-    static boolean FIND_FRIEND_MODE = false;
+    public static boolean FRIEND_MODE = false;
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
     static boolean BIG_MAP = false;
@@ -127,6 +131,16 @@ public class Utils {
         return (int) baseAzimuth + "° " + bearingText;
     }
 
+    //used to apply a low pass filter to rotation vector data
+    static float[] lowPass(float[] input, float[] output) {
+        if (output == null) return input;
+
+        for (int i = 0; i < input.length; i++) {
+            output[i] = (output[i] + ALPHA * (input[i] - output[i]));
+        }
+        return output;
+    }
+
     public static float normalizeBearing(float bearingTo) {
         if (bearingTo > 360)
             bearingTo %= 360;
@@ -171,7 +185,7 @@ public class Utils {
         return "https://maps.googleapis.com/maps/api/place/nearbysearch/json?" + "location=" +
                 location.getLatitude() + "," + location.getLongitude() +
                 "&radius=2000" + //"&sensor=true" seems deprecated
-                "&types=" + "restaurant" +// "point_of_interest"
+                "&types=" + PLACES_TO_SEARCH +
                 "&key=" + getMetadata(main);
     }
 
@@ -187,5 +201,15 @@ public class Utils {
             // if we can’t find it in the manifest, just return null
         }
         return null;
+    }
+
+    //to check if color is dark or light
+    public static boolean isColorDark(int color) {
+        double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+        if (darkness < 0.5) {
+            return false; // It's a light color
+        } else {
+            return true; // It's a dark color
+        }
     }
 }

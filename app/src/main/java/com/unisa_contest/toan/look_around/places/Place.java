@@ -5,6 +5,8 @@ import android.location.Location;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.unisa_contest.toan.look_around.Utils;
+
 import java.util.Random;
 
 /**
@@ -40,6 +42,10 @@ public class Place implements Parcelable {
         int g = rand.nextInt(255);
         int b = rand.nextInt(255);
         this.color = Color.rgb(r, g, b);
+
+        if (Utils.FRIEND_MODE) {
+            //todo search place address, check rete
+        }
     }
 
     private Place(Parcel in) {

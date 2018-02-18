@@ -24,10 +24,9 @@ public class ParserASync extends AsyncTask<String, Integer, ArrayList<Place>> {
     // Invoked by execute() method of this object
     @Override
     protected ArrayList<Place> doInBackground(String... jsonData) {
-        ///todo delete when ok
-        Log.d("toStringg: ", "doInBackGround parserAsync");
+
         JSONObject jObject;
-        ArrayList<Place> places = null;
+        ArrayList<Place> places = new ArrayList<>();
         Place_JSON placeJson = new Place_JSON();
 
         try {
@@ -38,9 +37,7 @@ public class ParserASync extends AsyncTask<String, Integer, ArrayList<Place>> {
         } catch (Exception e) {
             Log.d("Exception", e.toString());
         }
-        Utils.places = places;//used in drawerAsync
-        ///todo delete when ok caused NPE
-        Log.d("toStringg: ", places.toString() + " " + Utils.places.toString());
+        Utils.places = places; //used in drawerAsync
         return places;
     }
 
@@ -48,11 +45,11 @@ public class ParserASync extends AsyncTask<String, Integer, ArrayList<Place>> {
     @Override
     protected void onPostExecute(ArrayList<Place> list) {
 
-        Log.d("Map", "list size: " + list.size());
         //waiting for map ready
         while (null == Utils.map) {
             sleep(2000);
         }
+        Log.d("Map", "list size: " + list.size());
         Utils.map.clear(); //Clears all the existing markers;
 
         //use setTag on marker to link with a place (data are in json)

@@ -34,7 +34,7 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
             Log.d("ASync: ", "waiting for location...");
             sleep(3000);
         }
-//todo inutile eliminare probabilmente
+
         while (0 == Utils.places.size()) {
             if (isCancelled()) return null; //exit when onPause called
             Log.d("ASync: ", "waiting for places...");
@@ -51,6 +51,7 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
         height = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getHeight();
         float distanceTo, bearingTo, bearTo;
         boolean isLastZero = false; //to avoid polling and continuous logging
+        PlaceTag pt;
 
         while (true) {
             if (isCancelled()) return null; //exit when onPause called
@@ -62,13 +63,14 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
                 bearTo = Utils.myLocation.bearingTo(p.getLocationData());
                 bearingTo = Utils.normalizeBearing(bearTo); //altrimenti non effettua il calcolo corretto
                 //se orientamento di place troppo distante dal mio allora non mostrare
-                if ((bearingTo > (Utils.currentBearing + Utils.BEARING_OFFSET)) ||
-                        (bearingTo < (Utils.currentBearing - Utils.BEARING_OFFSET)))
+                if ((bearingTo > (Utils.currentBearing + Utils.BEARING_OFFSET)) ||         //+ Math.abs(Utils.currentRoll)
+                        (bearingTo < (Utils.currentBearing - Utils.BEARING_OFFSET)))         //- Math.abs(Utils.currentRoll)
                     continue;
-                toDraw.add(new PlaceTag(context, p, calculateX(bearingTo), calculateY(distanceTo), Utils.formatDistance(distanceTo)));
+                pt = new PlaceTag(context, p, calculateX(bearingTo), calculateY(distanceTo), Utils.formatDistance(distanceTo));
+                toDraw.add(pt); //todo strange memLeak on some devices
             }
             if (toDraw.size() > 0) {
-                publishProgress(view, toDraw.clone());//todo maybe better solution instead of clone, gc is called often
+                publishProgress(view, toDraw.clone()); //maybe better solution instead of clone
                 toDraw.clear();
                 isLastZero = false;
             } else {
@@ -98,17 +100,21 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
         Log.d("ASync: ", "onPostExecute " + result);
     }
 
-    private int calculateY(float distanceTo) { //todo aggiungere altri livelli probabilmente
+    private int calculateY(float distanceTo) {
+
         int inclination = 0;
         if ((null != Utils.usedSensor) && (Utils.usedSensor.equals("rotationVector"))) {
             inclination = (int) (((height * -Utils.currentInclination) / (Utils.INCLINATION_OFFSET * 2)));
             //inclination = inclination + (width / 2);
         }
         if (distanceTo < 250)
-            return height - (height / 5) + inclination;
-        else if (distanceTo < 800)
+            return height - (height / 4) + inclination;
+        else if (distanceTo < 500)
             return height - (height / 3) + inclination;
-        else return height / 2 + inclination;
+        else if (distanceTo < 750)
+            return (height / 2) + inclination;
+        else return (height / 3) + inclination;
+        //return height / 2 + inclination;
     }
 
     private int calculateX(float bearingTo) {
@@ -126,7 +132,7 @@ public class PlaceDrawerASync extends AsyncTask<Object, Object, Object> {
                 currOffset = bearingTo - Utils.currentBearing;           //devo disegnare a destra della meta dello schermo
             }
         }
-        currOffset = (((width * currOffset) / (Utils.BEARING_OFFSET * 2))); //todo inversamente proporzionale alla distanza
+        currOffset = (((width * currOffset) / (Utils.BEARING_OFFSET * 2))); //magari inversamente proporzionale alla distanza
 //        Log.d("Async back: ", "calc x: " + currOffset);
         return (int) currOffset + (width / 2);
     }

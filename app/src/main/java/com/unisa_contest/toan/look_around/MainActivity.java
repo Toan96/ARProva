@@ -49,6 +49,7 @@ import static com.unisa_contest.toan.look_around.CameraPreview.getCameraInstance
 public class MainActivity extends AppCompatActivity implements UpdateUICallback, MapFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
+    float[] filteredValues = new float[5];//null create problems //need to compare for lowPassFilter
     private Runnable runnable;
     private Handler handler;
     private FrameLayout preview, overlay, mapContainer;
@@ -79,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         if (null != savedInstanceState) {
             if (null != savedInstanceState.getParcelableArrayList("Places"))
                 Utils.places = savedInstanceState.getParcelableArrayList("Places");
-            Utils.FIND_FRIEND_MODE = savedInstanceState.getBoolean("FriendMode", false);
+            Utils.FRIEND_MODE = savedInstanceState.getBoolean("FriendMode", false);
         }
 
         preview = findViewById(R.id.camera_preview);
@@ -180,10 +181,12 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         Log.d("onResume: ", "entering..");
         showLayout();
         showLocation();
-        initSensors();
-        checkInternetConnection();
-        //start AsyncTask for drawing AR places
-        async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
+        if (cameraGranted && locationGranted) {
+            initSensors();
+            checkInternetConnection();
+            //start AsyncTask for drawing AR places
+            async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
+        }
     }
 
     @Override
@@ -202,8 +205,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             mPreview.releaseCamera(); // release the camera immediately on pause event
             preview.removeView(mPreview);
         }
-        async.cancel(true);
-        myGPSLocation.stopSearchForPlaces();
+        if (null != async)
+            async.cancel(true);
+        if (null != myGPSLocation)
+            myGPSLocation.stopSearchForPlaces();
     }
 
     @Override
@@ -222,6 +227,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         super.onDestroy();
         if (null != myGPSLocation)
             myGPSLocation.removeHandler();
+        if (Utils.FRIEND_MODE)
+            Utils.FRIEND_MODE = false;
     }
 
     @Override
@@ -229,8 +236,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         super.onSaveInstanceState(outState);
         if ((null != Utils.places) && (Utils.places.size() > 0))
             outState.putParcelableArrayList("Places", Utils.places);
-        if (Utils.FIND_FRIEND_MODE)
-            outState.putBoolean("FriendMode", Utils.FIND_FRIEND_MODE);
+        if (Utils.FRIEND_MODE)
+            outState.putBoolean("FriendMode", Utils.FRIEND_MODE);
     }
 
     @Override
@@ -300,7 +307,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
         mapFragment = MapFragment.newInstance();
-        if (Utils.FIND_FRIEND_MODE)
+        if (Utils.FRIEND_MODE)
             findViewById(R.id.returnToDefault).setVisibility(View.VISIBLE);
         getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();//non cambiare.
     }
@@ -309,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     //for map to obtain location (google is faster than me).
     private void showLocation() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!locationGranted) return;
+            if (!locationGranted || !cameraGranted) return;
         }
         myGPSLocation = new MyGPSLocation(this, mapFragment);
         checkExistingPosition();
@@ -373,7 +380,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             if (null != rotationVectorSensor) {
                 Log.i(TAG, "rotationVector sensor available. (TYPE_ROTATION_VECTOR)");
                 sensorManager.registerListener(sensorEventListener,
-                        rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                        rotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
                 return;
             } else {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
@@ -381,7 +388,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                     if (null != geoRotVectorSensor) {
                         Log.i(TAG, "geoRotVector sensor available. (TYPE_GEOMAGNETIC_ROTATION_VECTOR)");
                         sensorManager.registerListener(sensorEventListener,
-                                geoRotVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                                geoRotVectorSensor, SensorManager.SENSOR_DELAY_UI);
                         return;
                     }
                 }
@@ -414,15 +421,19 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     }
 
     private void updateBearing(SensorEvent event) {
-        //todo delay_normal forse troppo, diminuire e provare con low pass filter
+        //todo solo 180 con rotation vector
         //todo aggiungere condizione flat screen?
-        //todo check offset sensore tra +-20 a +- 50
         //todo true nord
         if (Sensor.TYPE_ROTATION_VECTOR == event.sensor.getType() ||
-                Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR == event.sensor.getType()) {
+                (Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR == event.sensor.getType())) {
             float[] rotationMatrix = new float[16];
+            if (Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR == event.sensor.getType()) {
+                filteredValues = Utils.lowPass(event.values, filteredValues);
+            } else {
+                filteredValues = event.values; //with gyro can avoid to filter, it is enough stable
+            }
             SensorManager.getRotationMatrixFromVector(
-                    rotationMatrix, event.values);
+                    rotationMatrix, filteredValues);
             Log.d("Getting rot matrix: ", "DONE");
             float[] remappedRotationMatrix = new float[16];
             //need to remap (x, z)
@@ -471,6 +482,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
 
         } else {
             //for old devices
+            //only orientation
             float bearing = 0;
 //          Log.d("event values: ", event.values[0] + ", " + event.values[1] + ", " + event.values[2]);
             //for screen adjustment
@@ -501,7 +513,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 .getLaunchIntentForPackage(getBaseContext().getPackageName());
         //noinspection ConstantConditions  //forse non tutti necessari
         i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        Utils.FIND_FRIEND_MODE = false;
+        Utils.FRIEND_MODE = false;
         Utils.places = new ArrayList<>();
         finish();
         startActivity(i);
@@ -581,15 +593,14 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Camera permission has been granted, preview can be displayed
                 Log.i(TAG, "CAMERA permission has now been granted. Showing preview.");
-                showLayout();
-                errCamera.setVisibility(View.INVISIBLE);
+                cameraGranted = true;
+                errCamera.setVisibility(View.GONE);
                 if (handler != null && runnable != null) {
                     handler.removeCallbacks(runnable);
                 }
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
                         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     Log.d(TAG, "API 23+: requesting permissions for location");
-                    //requestLocationPermissions();
                     handler = new Handler();
                     runnable = new Runnable() {
                         @Override
@@ -620,13 +631,13 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             // checked.
             if (Utils.verifyPermissions(grantResults)) {
                 // All required permissions have been granted.
-                showLocation();
+                locationGranted = true;
+                tvGpsValues.setText(R.string.tvGpsValuesHint);
                 if (handler != null && runnable != null) {
                     handler.removeCallbacks(runnable);
                 }
                 if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     Log.d(TAG, "API 23+: requesting permission for camera");
-                    //requestCameraPermission();
                     handler = new Handler();
                     runnable = new Runnable() {
                         @Override
