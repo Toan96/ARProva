@@ -10,6 +10,8 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
@@ -181,13 +183,21 @@ public class MyGPSLocation {
 
     //method to get places
     public void startSearchForPlaces(Location location) {
-        PlacesASync placesASync = new PlacesASync();
-        placesASync.execute(Utils.sbMethod((Activity) context, location));
+        if (null == placesASync) {
+            placesASync = new PlacesASync();
+            if (Build.VERSION.SDK_INT >= 11/*HONEYCOMB*/) {
+                placesASync.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, Utils.sbMethod((Activity) context, location));
+            } else {
+                placesASync.execute(Utils.sbMethod((Activity) context, location));
+            }
+        }
     }
 
     public void stopSearchForPlaces() {
-        if (null != placesASync)
+        if (null != placesASync) {
             placesASync.cancel(true); //gestire in asyncTasks in caso non si interrompessero
+            placesASync = null;
+        }
     }
 
     //methods to take address

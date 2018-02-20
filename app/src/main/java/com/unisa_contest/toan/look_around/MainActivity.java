@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -29,7 +30,9 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -54,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private Handler handler;
     private FrameLayout preview, overlay, mapContainer;
     private CoordinatorLayout coordinatorLayout;
+    private LinearLayout linL;
     private MapFragment mapFragment;
     private CameraPreview mPreview;
     private MyGPSLocation myGPSLocation;
@@ -184,7 +188,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         if (cameraGranted && locationGranted) {
             initSensors();
             checkInternetConnection();
-            //start AsyncTask for drawing AR places
+            //start AsyncTask for drawing AR places //no need executeOnExecutor
             async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
         }
     }
@@ -209,6 +213,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             async.cancel(true);
         if (null != myGPSLocation)
             myGPSLocation.stopSearchForPlaces();
+        if (null != linL) {
+            linL.setVisibility(View.GONE);
+            ((ImageButton) findViewById(R.id.search)).setImageResource(R.drawable.search);
+        }
     }
 
     @Override
@@ -307,8 +315,16 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
         mapFragment = MapFragment.newInstance();
-        if (Utils.FRIEND_MODE)
+        RelativeLayout rl = findViewById(R.id.filterLayout);
+        if (Utils.FRIEND_MODE) {
             findViewById(R.id.returnToDefault).setVisibility(View.VISIBLE);
+            rl.setVisibility(View.GONE);
+        } else {
+            linL = findViewById(R.id.filterLine);
+            linL.removeAllViews();
+            createFilterButton();
+            rl.bringToFront();
+        }
         getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();//non cambiare.
     }
 
@@ -434,7 +450,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             }
             SensorManager.getRotationMatrixFromVector(
                     rotationMatrix, filteredValues);
-            Log.d("Getting rot matrix: ", "DONE");
+//            Log.d("Getting rot matrix: ", "DONE");
             float[] remappedRotationMatrix = new float[16];
             //need to remap (x, z)
             SensorManager.remapCoordinateSystem(rotationMatrix,
@@ -467,7 +483,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                     break;
                 }
             }
-            Log.d("rotVector:", "orientation values: " + orientation[0] + ", " + orientation[1] + ", " + orientation[2]);
+//            Log.d("rotVector:", "orientation values: " + orientation[0] + ", " + orientation[1] + ", " + orientation[2]);
 
             Utils.usedSensor = "rotationVector";
             //qui uso yaw or azimuth
@@ -517,6 +533,60 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         Utils.places = new ArrayList<>();
         finish();
         startActivity(i);
+    }
+
+    public void showPlacesFilters(View v) {
+        if (View.VISIBLE == linL.getVisibility()) { //filtri visibili, spariscono
+            linL.setVisibility(View.GONE);
+            ((ImageButton) v).setImageResource(R.drawable.search);
+        } else { //filtri invisibili, vengono mostrati
+            linL.setVisibility(View.VISIBLE);
+            ((ImageButton) v).setImageResource(R.drawable.close);
+        }
+    }
+
+    private void createFilterButton() {
+        for (int i = 0; i < Utils.placesFilter.length; i++) {
+            ImageButton ib = new ImageButton(this);
+            LinearLayout.LayoutParams lp =
+                    new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 10, 0);
+            ib.setLayoutParams(lp);
+            ib.setTag(Utils.placesFilter[i]);
+            if (ib.getTag().toString().equals(Utils.PLACES_TO_SEARCH)) {
+                ib.setColorFilter(Color.WHITE);
+            }
+            ib.setImageResource(Utils.getImageId(this, ib.getTag().toString()));
+            ib.setBackgroundColor(Color.TRANSPARENT);
+            ib.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (Utils.PLACES_TO_SEARCH.equals(view.getTag().toString()))
+                        return; //se uguale inutile ricominciare la ricerca
+                    ViewGroup v = ((ViewGroup) view.getParent());
+                    for (int i = 0; i < v.getChildCount(); i++) {
+                        View child = v.getChildAt(i);
+                        if (child.getTag().toString().equals(Utils.PLACES_TO_SEARCH))
+                            ((ImageButton) child).setColorFilter(Color.parseColor("#cecece"));
+                    }
+                    ((ImageButton) view).setColorFilter(Color.WHITE);
+                    Utils.PLACES_TO_SEARCH = view.getTag().toString();
+                    Log.d("click on filter: ", Utils.PLACES_TO_SEARCH);
+                    myGPSLocation.stopSearchForPlaces();
+                    ConnectivityManager cm =
+                            (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                    //noinspection ConstantConditions
+                    NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                    boolean isConnected = activeNetwork != null &&
+                            activeNetwork.isConnectedOrConnecting();
+                    if (isConnected && (null != Utils.myLocation)) {
+                        myGPSLocation.startSearchForPlaces(Utils.myLocation);
+                        Log.d(TAG, "now searching for filtered places..");
+                    }
+                }
+            });
+            linL.addView(ib);
+        }
     }
 
     /**

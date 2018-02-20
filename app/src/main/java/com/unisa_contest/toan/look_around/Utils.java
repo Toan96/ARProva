@@ -38,8 +38,6 @@ public class Utils {
     static final int BIG_MAP_DIMEN_LAND = 400;
     //used for AR
     private static final float ALPHA = 0.25f;//used for LowPass Filter, if ALPHA = 1 OR 0, no filter applies, less is smoother but also slower.
-    //used for json query
-    private static final String PLACES_TO_SEARCH = "point_of_interest"; // "restaurant"
     //used to access map from PlacesASync
     public static GoogleMap map = null;
     public static Location myLocation = null;
@@ -61,11 +59,16 @@ public class Utils {
 */
     //used for shared locations
     public static boolean FRIEND_MODE = false;
+    //used for json query
+    static String PLACES_TO_SEARCH = "point_of_interest"; // "restaurant"
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
     static boolean BIG_MAP = false;
     //used to draw marker
     static Resources res;
+    //places filters
+    //per aggiungere filtri aggiungere qui e creare icona
+    static String[] placesFilter = {"point_of_interest", "restaurant", "bar", "museum", "gas_station"};
 
     //to take margin in pixels.
     static int dpToPixels(Context context, int dpValue) {
@@ -212,4 +215,10 @@ public class Utils {
             return true; // It's a dark color
         }
     }
+
+    //to take filter image programmatically
+    static int getImageId(Context context, String imageName) {
+        return context.getResources().getIdentifier("drawable/" + imageName, null, context.getPackageName());
+    }
+
 }

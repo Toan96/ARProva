@@ -8,6 +8,41 @@
     android:baselineAligned="false"
     tools:context=".MainActivity">
 
+    <RelativeLayout
+        android:id="@+id/filterLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp">
+
+        <ImageButton
+            android:id="@+id/search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="15dp"
+            android:layout_marginRight="15dp"
+            android:background="@android:color/transparent"
+            android:onClick="showPlacesFilters"
+            android:paddingTop="10dp"
+            android:src="@drawable/search" />
+
+        <HorizontalScrollView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/search">
+
+            <LinearLayout
+                android:id="@+id/filterLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+    </RelativeLayout>
+
     <Button
         android:id="@+id/returnToDefault"
         android:layout_width="wrap_content"
