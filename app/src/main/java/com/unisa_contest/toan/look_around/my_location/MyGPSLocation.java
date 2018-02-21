@@ -61,7 +61,7 @@ public class MyGPSLocation {
                 startSearchForPlaces(location);
                 first = false;
             }
-            mapFragment.setCamera(location);//setZoomLevel sembra non servire
+            mapFragment.setCamera(location);
             Utils.myLocation = location;
         }
 
@@ -85,11 +85,12 @@ public class MyGPSLocation {
         }
     };
 
-    public MyGPSLocation(Context context, MapFragment mapFragment) {
+    public MyGPSLocation(Context context, final MapFragment mapFragment) {
         this.context = context;
         this.updateUICallback = (UpdateUICallback) context;
         this.locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         this.mapFragment = mapFragment;
+        adjustCamera();
     }
 
     //metodi per gps
@@ -165,6 +166,22 @@ public class MyGPSLocation {
         if (null != handler) {
             handler.removeCallbacks(runnable);
         }
+    }
+
+    //to fix map marker centering //temporaneo
+    private void adjustCamera() {
+        if (null != mapFragment && null != mapFragment.getMapLocation()) {
+            mapFragment.setCamera(mapFragment.getMapLocation());
+            //Log.d(TAG, "adjust camera");
+        }
+        handler = new Handler();
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                adjustCamera();
+            }
+        };
+        handler.postDelayed(runnable, 5000);
     }
 
     private boolean isLocationEnabled() {

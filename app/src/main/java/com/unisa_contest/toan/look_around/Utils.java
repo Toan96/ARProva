@@ -60,7 +60,7 @@ public class Utils {
     //used for shared locations
     public static boolean FRIEND_MODE = false;
     //used for json query
-    static String PLACES_TO_SEARCH = "point_of_interest"; // "restaurant"
+    static String PLACES_TO_SEARCH = "point_of_interest";
     static String[] PERMISSIONS_LOCATION = {Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
     static boolean BIG_MAP = false;

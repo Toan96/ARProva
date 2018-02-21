@@ -203,6 +203,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         }
         //need to do before onSaveInstanceState
         if (null != mapContainer) {
+            if (Utils.BIG_MAP)
+                showMap(); //to avoid compass on small map
             getSupportFragmentManager().beginTransaction().remove(mapFragment).commit();
         }
         if (null != mPreview) {
@@ -351,7 +353,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             Log.d("gps: ", "used lastKnownLocation");
             tvGpsValues.setText(Utils.formattedValues(lastKnown));
             Utils.myLocation = lastKnown;
-            mapFragment.setCamera(lastKnown); //sembra non serva setZoomLevel
+            mapFragment.setCamera(lastKnown);
             updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
             MyGPSLocation.first = false;
             handler = new Handler();
@@ -379,7 +381,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                         if ((null != Utils.places) && (0 == Utils.places.size()))
                             myGPSLocation.startSearchForPlaces(l);
                         Utils.myLocation = l;
-                        mapFragment.setCamera(l); //sembra non serva setZoomLevel
+                        mapFragment.setCamera(l);
                         updateSeekZoom(MapFragment.MAX_ZOOM_SEEK);
                         //updateDistance(mapFragment.getMapRadius());
                         MyGPSLocation.first = false;
