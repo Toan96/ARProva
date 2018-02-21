@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private Handler handler;
     private FrameLayout preview, overlay, mapContainer;
     private CoordinatorLayout coordinatorLayout;
+    private RelativeLayout filterLayout;
     private LinearLayout linL;
     private MapFragment mapFragment;
     private CameraPreview mPreview;
@@ -282,6 +283,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 }
                 tvBearing.setVisibility(View.INVISIBLE);
                 Utils.BIG_MAP = true;
+                filterLayout.setVisibility(View.GONE);
                 //fermo async AR
                 async.cancel(true);
             } else {
@@ -290,6 +292,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                         Utils.dpToPixels(this, Utils.SMALL_MAP_DIMEN)));
                 tvBearing.setVisibility(View.VISIBLE);
                 Utils.BIG_MAP = false;
+                filterLayout.setVisibility(View.VISIBLE);
                 //riparte async AR
                 async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
             }
@@ -319,15 +322,15 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         mapContainer = findViewById(R.id.mapContainer);
         mapContainer.setVisibility(View.VISIBLE);
         mapFragment = MapFragment.newInstance();
-        RelativeLayout rl = findViewById(R.id.filterLayout);
+        filterLayout = findViewById(R.id.filterLayout);
         if (Utils.FRIEND_MODE) {
             findViewById(R.id.returnToDefault).setVisibility(View.VISIBLE);
-            rl.setVisibility(View.GONE);
+            filterLayout.setVisibility(View.GONE);
         } else {
             linL = findViewById(R.id.filterLine);
             linL.removeAllViews();
             createFilterButton();
-            rl.bringToFront();
+            filterLayout.bringToFront();
         }
         getSupportFragmentManager().beginTransaction().add(R.id.mapContainer, mapFragment).commitAllowingStateLoss();//non cambiare.
     }
