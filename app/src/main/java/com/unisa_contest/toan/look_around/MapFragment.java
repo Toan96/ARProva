@@ -199,6 +199,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     @SuppressWarnings("all")
     public void setCamera(Location location) {
         if (null != map) {
+/*todo in alcuni casi myLocation e mapLocation sono diversi e il marker non è centrato, dovrebbe capitare in particolare in zone poco coperte
+possibili soluzioni:setMylocation disabled e gestione della posizione sulla mappa (icona persona)
+        possibili problemi: getMyLocation non piu disponibile, ad ogni locationUpdate necessario cancellare e ridisegnare marker in nuova posizione
+            if (location != null) {
+                Log.d("SetCamera: ", "    location: " + location.getLatitude() + ", " + location.getLongitude());
+            }
+            if (map.getMyLocation() != null) {
+                Log.d("SetCamera: ", "map location: " + map.getMyLocation().getLatitude() + ", " + map.getMyLocation().getLongitude());
+            }
+*/
             CameraUpdate cameraUpdate;
             if (null != location && first) {
                 cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAX_ZOOM);

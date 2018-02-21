@@ -211,8 +211,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         }
         if (null != async)
             async.cancel(true);
-        if (null != myGPSLocation)
+        if (null != myGPSLocation) {
             myGPSLocation.stopSearchForPlaces();
+            myGPSLocation.dismissDialog();
+        }
         if (null != linL) {
             linL.setVisibility(View.GONE);
             ((ImageButton) findViewById(R.id.search)).setImageResource(R.drawable.search);

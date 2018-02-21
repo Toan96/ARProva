@@ -44,7 +44,8 @@ public class MyGPSLocation {
     private Runnable runnable;
     private Handler handler = null;
     private UpdateUICallback updateUICallback = null;
-    private AlertDialog.Builder dialog = null;
+    private AlertDialog.Builder dialogBuilder = null;
+    private AlertDialog dialog = null;
     private PlacesASync placesASync = null;
 
     //listener per gps updates
@@ -120,9 +121,9 @@ public class MyGPSLocation {
     }
 
     private void showAlert() {
-        if (null == dialog) {
-            dialog = new AlertDialog.Builder(context);
-            dialog.setTitle(R.string.dialogLocation_Title)
+        if (null == dialogBuilder) {
+            dialogBuilder = new AlertDialog.Builder(context);
+            dialogBuilder.setTitle(R.string.dialogLocation_Title)
                     .setMessage(R.string.dialogLocation_Message)
                     .setPositiveButton(R.string.dialogLocation_Positive, new DialogInterface.OnClickListener() {
                         @Override
@@ -131,26 +132,39 @@ public class MyGPSLocation {
                             context.startActivity(myIntent);
                         }
                     });
-        }
-        dialog.setNegativeButton(R.string.dialogLocation_Negative, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                handler = new Handler();
-                runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        takeLocationUpdates();
-                        ((MainActivity) context).checkExistingPosition(); //dopo perche takeLoc mostra dialog
-                        //ma dovrebbe funzionare in ogni caso, infatti existing position vengono mostrate solo se gps enabled
-                        //quindi, quando non verra mostrato dialog
-                    }
-                };
-                handler.postDelayed(runnable, 7000);
+            dialogBuilder.setNegativeButton(R.string.dialogLocation_Negative, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface paramDialogInterface, int paramInt) {
+                    handler = new Handler();
+                    runnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            takeLocationUpdates();
+                            ((MainActivity) context).checkExistingPosition(); //dopo perche takeLoc mostra dialog
+                            //ma dovrebbe funzionare in ogni caso, infatti existing position vengono mostrate solo se gps enabled
+                            //quindi, quando non verra mostrato dialog
+                        }
+                    };
+                    handler.postDelayed(runnable, 7000);
 
-            }
-        });
-        dialog.setCancelable(false);
-        dialog.show();
+                }
+            });
+        }
+        if (null == dialog) {
+            dialog = dialogBuilder.create();
+            dialog.setCancelable(false);
+        }
+        if (!dialog.isShowing())
+            dialog.show();
+    }
+
+    public void dismissDialog() {
+        if (null != dialog) {
+            dialog.dismiss();
+        }
+        if (null != handler) {
+            handler.removeCallbacks(runnable);
+        }
     }
 
     private boolean isLocationEnabled() {
