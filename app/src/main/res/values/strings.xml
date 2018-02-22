@@ -23,4 +23,10 @@
     <string name="customPlace">Received position</string>
     <string name="returnToDefault">Friend Mode\nSwitch to default</string>
     <string name="helpDialogTitle">Help</string>
+    <string name="helpInterface">Interface</string>
+    <string name="helpFriendMode">Friend Mode</string>
+    <string name="helpCalibration">Calibration</string>
+    <string name="helpMessageInterface">Click on the map to have a wider view, the points of interest are represented by colored circles.\n\nThe side bar represents the considered visual distance, reduce it in case of lack of points of interest.\nIt is shown an approximate distance and the current direction.\n\nThe approximate address of your location is shown below, in case the address is missing, the location data (latitude, longitude and altitude) are shown.\n\nPointing the smartphone to a point of interest, it will be shown a colored tag with the name, the address and the approximate distance from that point.\n\nIn the upper left you can select a filter for the points of interest.\nThe available filters (for now) are : restaurants, bars, museums and gas stations. The active filter is slightly highlighted.</string>
+    <string name="helpMessageFriendMode">LookARound is able to open the positions shared by their contacts on social networks.\nOpening the application from a shared link containing a location will start the app in \"FriendMode\" showing only the shared positions as a point of interest.</string>
+    <string name="helpMessageCalibrate">Sometimes it is necessary to calibrate the sensors of the device to get a realistic experience.\nIf you find abnormal behavior of the app turn the device for a few seconds according to each of the main axes as shown in the figure.</string>
 </resources>

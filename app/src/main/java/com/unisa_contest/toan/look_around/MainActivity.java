@@ -246,8 +246,11 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         super.onDestroy();
         if (null != myGPSLocation)
             myGPSLocation.removeHandler();
-        if (Utils.FRIEND_MODE)
+        if (Utils.FRIEND_MODE) {
             Utils.FRIEND_MODE = false;
+            if (null != Utils.places && Utils.places.size() > 0)
+                Utils.places.clear();
+        }
     }
 
     @Override
@@ -561,7 +564,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         startActivity(i);
     }
 
-    public void showHelp(View v) { //todo stringhe it e en completare
+    public void showHelp(View v) {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
         LayoutInflater inflater = this.getLayoutInflater();

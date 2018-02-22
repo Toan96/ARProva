@@ -18,8 +18,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
-                android:text="Interfaccia"
-                android:textColor="#000" />
+                android:text="@string/helpInterface"
+                android:textColor="@android:color/black" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -31,8 +31,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="20dp"
-                android:text="FriendMode"
-                android:textColor="#000" />
+                android:text="@string/helpFriendMode"
+                android:textColor="@android:color/black" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -44,17 +44,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="20dp"
-                android:text="Calibrazione"
-                android:textColor="#000" />
+                android:text="@string/helpCalibration"
+                android:textColor="@android:color/black" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
                 android:text="@string/helpMessageCalibrate" />
 
             <ImageView
                 android:layout_width="250dp"
                 android:layout_height="250dp"
+                android:layout_gravity="center"
                 android:src="@drawable/calibration_help" />
 
         </LinearLayout>
