@@ -297,6 +297,19 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
                 async = new PlaceDrawerASync().execute(getApplicationContext(), overlay);
             }
             mapFragment.switchCompassOnMap();
+
+            //update distance
+            handler = new Handler();
+            runnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (null != mapFragment) {
+                        updateDistance(mapFragment.getMapRadius());
+                        Utils.visibleDistance = mapFragment.getMapRadius();
+                    }
+                }
+            };
+            handler.postDelayed(runnable, 1000);
         }
     }
 
@@ -540,6 +553,10 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         Utils.places = new ArrayList<>();
         finish();
         startActivity(i);
+    }
+
+    public void showHelp(View v) {
+        Toast.makeText(getApplicationContext(), "Coming soon..", Toast.LENGTH_SHORT).show();
     }
 
     public void showPlacesFilters(View v) {
