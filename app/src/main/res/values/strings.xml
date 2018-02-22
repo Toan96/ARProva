@@ -22,4 +22,5 @@
     <string name="checkInternet">Check internet connection</string>
     <string name="customPlace">Received position</string>
     <string name="returnToDefault">Friend Mode\nSwitch to default</string>
+    <string name="helpDialogTitle">Help</string>
 </resources>

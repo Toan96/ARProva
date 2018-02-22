@@ -3,6 +3,7 @@ package com.unisa_contest.toan.look_around;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -22,8 +23,10 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
@@ -67,6 +70,7 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
     private AsyncTask async;
     private SensorManager sensorManager;
     private SensorEventListener sensorEventListener;
+    private AlertDialog helpDialog = null;
     private boolean cameraGranted = false, locationGranted = false;
 
     @Override
@@ -222,6 +226,8 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
             linL.setVisibility(View.GONE);
             ((ImageButton) findViewById(R.id.search)).setImageResource(R.drawable.search);
         }
+        if (null != helpDialog && helpDialog.isShowing())
+            helpDialog.dismiss();
     }
 
     @Override
@@ -555,8 +561,22 @@ public class MainActivity extends AppCompatActivity implements UpdateUICallback,
         startActivity(i);
     }
 
-    public void showHelp(View v) {
-        Toast.makeText(getApplicationContext(), "Coming soon..", Toast.LENGTH_SHORT).show();
+    public void showHelp(View v) { //todo stringhe it e en completare
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+        LayoutInflater inflater = this.getLayoutInflater();
+        final View dialogView = inflater.inflate(R.layout.help_dialog, null);
+
+        builder.setView(dialogView);
+        builder.setTitle(R.string.helpDialogTitle);
+        builder.setPositiveButton(R.string.dialogLocation_Negative, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                helpDialog.dismiss();
+            }
+        });
+        helpDialog = builder.create();
+        helpDialog.show();
     }
 
     public void showPlacesFilters(View v) {
