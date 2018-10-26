@@ -136,7 +136,7 @@
             android:layout_marginRight="67dp"
             android:shadowColor="@android:color/black"
             android:shadowRadius="0.2"
-            android:text="50° NE"
+            android:text="???° NE"
             android:textAlignment="viewEnd"
             android:textColor="@color/colorTextTv"
             android:visibility="invisible"
